@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    app.js — estado de la sesión, carga de archivos y guardado seguro
    ===================================================================== */
@@ -62,6 +63,7 @@
         }
       });
       await App.cfg.load();
+      await App.auth.ensure();
       await App.lock.enter();
       // carpeta nueva: se crea Config_QORVEX.json de cero (turnos por defecto, sin supervisores ni usuarios)
       if (!App.cfg.loaded && App.lock.canEdit()) { try { await App.cfg.save(App.cfg.get()); toast('Carpeta nueva: se creó Config_QORVEX.json. Da de alta supervisores, usuarios y metas en CONFIG.', 'ok', 7000); } catch (e) { toast(`No se pudo crear Config_QORVEX.json: ${e.message}`, 'warn', 6000); } }

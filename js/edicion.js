@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    edicion.js — editar celdas desde la pantalla Planes
    Cada columna sabe de qué archivo sale; el cambio se aplica en memoria a

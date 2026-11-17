@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    correcciones.js — Correcciones_Motor.txt (separado por tabulador)
    Los archivos de las tabletas (Validacion_TAB1_2026-11.txt, Secuencia_TAB2_…)

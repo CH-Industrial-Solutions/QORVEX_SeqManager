@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    capturas.js — Validación y Secuencia desde los TXT de la carpeta
    - Cada equipo escribe sus propios archivos, uno por mes:

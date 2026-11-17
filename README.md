@@ -1,12 +1,18 @@
-# QORVEX · Manufacturing Intelligence Engine (v12)
+# QORVEX · Manufacturing Intelligence Engine (V 13)
+
+© 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Ver LEGAL.md, LICENSE.txt y TERCEROS.txt.
 
 Publicado en GitHub Pages: https://charliealberth2805-svg.github.io/QORVEX/
 
-- Abrir en **Microsoft Edge o Google Chrome** (Windows) → **Conectar carpeta** → carpeta compartida **Data Base**.
-- Al entrar se elige **Editor** (una persona a la vez; se cierra solo tras 30 min sin movimiento) o **Consulta** (solo lectura).
-- Validación y Secuencia se leen de los **TXT** de las tabletas; Planes, Pulls y exportaciones siguen en **Excel**.
-- **PRODUCTIVIDAD**: por turno, fecha, supervisor, persona y componente, contra metas. Exporta a Excel.
-- **CONFIG**: turnos, días laborables, festivos, metas (jobs y contenedores), supervisores y usuarios de QORVEX MOBILE.
-- Este repositorio solo tiene el programa. **Los datos nunca se suben aquí.**
+## Uso
+- Edge o Chrome en Windows → **Conectar carpeta** (carpeta compartida **Data Base**) → **Iniciar sesión**.
+- Cuenta maestra: **ADMIN / admin2026**. Los demás se registran (quedan pendientes) o los da de alta un Administrador en **CONFIG**.
+- Roles: **Administrador** (todo) · **Capturista** (Motor y Mobile, sin CONFIG) · **Validador** (solo QORVEX MOBILE).
+- Editor / Consulta: una sola persona edita a la vez; el modo Editor se cierra tras 30 min sin movimiento.
+- CONFIG: turnos, días, festivos, metas, supervisores, usuarios (misma lista que Mobile), fondo del login y logos de empresa (salen en reportes impresos).
+
+## Estructura
+- `index.html` · `css/` · `img/` (logo QORVEX, icono CH, fondos con marca CH) · `js/` (un archivo por módulo; `js/lib/` = xlsx-js-style, Apache 2.0).
+- Datos: nunca en este repositorio; viven en la carpeta Data Base (TXT de capturas, Excel de Planes/Pulls, Config_QORVEX.json).
 
 QORVEX MOBILE: https://charliealberth2805-svg.github.io/Qorvex-Mobile/

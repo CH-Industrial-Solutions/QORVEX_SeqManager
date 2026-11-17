@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    duplicados.js — "Agregar duplicado" (solo QORVEX, modo Editor)
    En QORVEX MOBILE un job no se puede repetir (salvo Switch Ch / Gde hasta

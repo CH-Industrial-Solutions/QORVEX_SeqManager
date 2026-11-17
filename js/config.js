@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    config.js — Config_QORVEX.json (en la carpeta Data Base)
    Única fuente de: turnos y horarios, días laborables, festivos, metas
@@ -9,7 +10,8 @@
   const { $, $$, esc, fmtN, toast, pad } = App;
   const NAME = 'Config_QORVEX.json';
   const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const ROLE_N = { validador: 'Validador', secuenciador: 'Secuenciador', ambos: 'Validador y secuenciador', admin: 'Administrador' };
+  const ROLE_N = { admin: 'Administrador', capturista: 'Capturista', validador: 'Validador' };
+  const roleOf = (r) => (r === 'admin' || r === 'capturista' ? r : 'validador'); // roles anteriores (ambos, secuenciador…) → Validador
   const goal0 = () => ({ val: { jobs: 0, cont: 0 }, seq: { jobs: 0, cont: 0 } });
   const DEF = () => ({
     version: 1, updated: '', by: '',
@@ -20,6 +22,7 @@
     ],
     supervisors: [], users: [], holidays: [],
     motor: { idleMin: 30 },
+    brand: { wall: 1, logos: [] },
   });
   let CFG = DEF(), META = { loaded: false, lastModified: 0 };
 
@@ -31,9 +34,10 @@
       goals: { val: { jobs: +(x.goals?.val?.jobs) || 0, cont: +(x.goals?.val?.cont) || 0 }, seq: { jobs: +(x.goals?.seq?.jobs) || 0, cont: +(x.goals?.seq?.cont) || 0 } },
     }));
     o.supervisors = (o.supervisors || []).map((s) => ({ emp: String(s.emp || '').trim().toUpperCase(), name: String(s.name || '').trim(), active: s.active !== false })).filter((s) => s.emp && s.name);
-    o.users = (o.users || []).map((u) => ({ emp: String(u.emp || '').trim().toUpperCase(), name: String(u.name || '').trim(), role: ROLE_N[u.role] ? u.role : 'ambos', pw: u.pw || '', pwAt: +u.pwAt || 0, must: !!u.must, active: u.active !== false })).filter((u) => u.emp && u.name);
+    o.users = (o.users || []).map((u) => ({ emp: String(u.emp || '').trim().toUpperCase(), name: String(u.name || '').trim(), role: roleOf(u.role), pw: u.pw || '', pwAt: +u.pwAt || 0, must: !!u.must, active: u.active !== false, status: u.status === 'pendiente' ? 'pendiente' : 'activo', created: +u.created || 0, by: u.by || '' })).filter((u) => u.emp && u.name && u.emp !== 'ADMIN');
     o.holidays = (o.holidays || []).filter((h) => /^\d{4}-\d{2}-\d{2}$/.test(h.d)).map((h) => ({ d: h.d, n: String(h.n || '').trim() })).sort((a, b) => a.d.localeCompare(b.d));
     o.motor = { idleMin: Math.max(5, +(o.motor && o.motor.idleMin) || 30) };
+    o.brand = { wall: (o.brand && +o.brand.wall === 2) ? 2 : 1, logos: ((o.brand && o.brand.logos) || []).filter((x) => /^data:image\//.test(x)).slice(0, 3) };
     return o;
   }
 
@@ -50,13 +54,47 @@
     const S = App.S;
     if (App.lock && !App.lock.canEdit()) throw new Error('Modo consulta: no se puede guardar la configuración.');
     const cur = await App.txt.readOpt(S.dir, NAME);
-    if (cur && META.loaded && cur.lastModified !== META.lastModified) throw new Error('La configuración cambió en otro equipo después de abrirla. Vuelve a cargarla.');
-    const c = normalize(next); c.updated = new Date().toISOString(); c.by = (App.lock && App.lock.who()) || '';
+    const c = normalize(next);
+    // Si una tableta cambió el archivo mientras se editaba (por ejemplo, creó un usuario o cambió su contraseña),
+    // se conservan esos cambios de usuarios en lugar de rechazar el guardado.
+    if (cur && cur.lastModified !== META.lastModified) {
+      try {
+        const disk = normalize(JSON.parse(cur.text.replace(/^\uFEFF/, ''))), base = new Set((CFG.users || []).map((u) => u.emp));
+        disk.users.forEach((du) => {
+          const mine = c.users.find((u) => u.emp === du.emp);
+          if (!mine) { if (!base.has(du.emp)) c.users.push(du); return; } // nuevo desde una tableta (los que se quitaron aquí no regresan)
+          if ((du.pwAt || 0) > (mine.pwAt || 0)) Object.assign(mine, { pw: du.pw, pwAt: du.pwAt, must: du.must });
+        });
+      } catch (e) { console.warn('config en disco', e); }
+    } c.updated = new Date().toISOString(); c.by = (App.lock && App.lock.who()) || '';
     if (!(await App.fs.ensurePermission(S.dir))) throw new Error('No se autorizó la escritura en la carpeta.');
     if (cur) { try { await App.fs.backup(S.dir, NAME, new TextEncoder().encode(cur.text)); } catch (e) { console.warn(e); } }
     await App.txt.writeWhole(S.dir, NAME, JSON.stringify(c, null, 2));
     await load();
     return CFG;
+  }
+
+  /** Auto-registro: agrega una cuenta PENDIENTE leyendo el archivo más reciente (no requiere modo Editor) */
+  async function addPending(u) {
+    const S = App.S;
+    if (!(await App.fs.ensurePermission(S.dir))) throw new Error('No se autorizó la escritura en la carpeta.');
+    const cur = await App.txt.readOpt(S.dir, NAME);
+    const c = normalize(cur ? JSON.parse(cur.text.replace(/^\uFEFF/, '')) : null);
+    if (u.emp === 'ADMIN' || c.users.some((x) => x.emp === u.emp)) throw new Error('Ese número de empleado ya está registrado.');
+    c.users.push({ emp: u.emp, name: u.name, role: 'validador', pw: u.pw, pwAt: Date.now(), must: false, active: true, status: 'pendiente', created: Date.now(), by: 'Registro · QORVEX' });
+    c.updated = new Date().toISOString(); c.by = `Registro de ${u.name}`;
+    await App.txt.writeWhole(S.dir, NAME, JSON.stringify(c, null, 2));
+    await load();
+  }
+
+  /** Imagen subida → PNG reducido (máx. 360×140) como data URL */
+  function shrink(file) {
+    return new Promise((res, rej) => {
+      const img = new Image(), url = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, 360 / img.width, 140 / img.height), c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url); res(c.toDataURL('image/png')); };
+      img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('No es una imagen válida')); };
+      img.src = url;
+    });
   }
 
   /* ---------- Turnos, días y metas ---------- */
@@ -83,6 +121,7 @@
   let D = null; // borrador en edición
   function render(m) {
     const S = App.S;
+    if (!App.auth.isAdmin()) { m.innerHTML = '<div class="empty">CONFIGURACIÓN es solo para el Administrador.</div>'; return; }
     if (!S.dir) { m.innerHTML = '<div class="empty">Primero conecta la carpeta de trabajo (ARCHIVOS).</div>'; return; }
     const ro = App.lock && !App.lock.canEdit();
     if (!D) D = JSON.parse(JSON.stringify(CFG));
@@ -91,7 +130,7 @@
     m.innerHTML = `
       <div class="ptitle"><h1>CONFIGURACIÓN <small>Turnos, metas, supervisores y usuarios</small></h1>
         <span class="muted">${META.loaded ? `${esc(NAME)} · ${CFG.updated ? `guardado ${App.fDT(new Date(CFG.updated).getTime())}${CFG.by ? ` por ${esc(CFG.by)}` : ''}` : ''}` : 'Aún no existe Config_QORVEX.json: se crea al guardar'}</span>
-        <span class="sp"></span>${ro ? '<span class="pill warn">Modo consulta: solo lectura</span>' : '<button class="btn" id="cfReset">Descartar cambios</button><button class="btn primary" id="cfSave">Guardar configuración</button>'}</div>
+        <span class="sp"></span><span id="cfDirty"></span>${ro ? '<span class="pill warn">Modo consulta: solo lectura</span>' : '<button class="btn" id="cfReset">Descartar cambios</button><button class="btn primary" id="cfSave">Guardar configuración</button>'}</div>
       <div class="note">QORVEX MOBILE toma de aquí los turnos, los usuarios y los supervisores cada vez que se conecta a la carpeta.</div>
 
       <div class="dpanel cfg"><div class="dph"><h3>Turnos, días laborables y metas</h3><span class="sp"></span>${ro ? '' : '<button class="btn sm" id="shAdd">+ Agregar turno</button>'}</div>
@@ -122,20 +161,31 @@
           </tbody></table></div>
       </div>
 
-      <div class="dpanel cfg"><div class="dph"><h3>Usuarios de QORVEX MOBILE</h3><span class="muted small">Validadores y secuenciadores · la contraseña se guarda cifrada</span><span class="sp"></span>${ro ? '' : '<button class="btn sm" id="usAdd">+ Agregar usuario</button>'}</div>
-        <table class="t mini"><thead><tr><th>No. empleado</th><th>Nombre</th><th>Puesto</th><th>Contraseña</th><th>Pedir cambio</th><th>Activo</th><th></th></tr></thead><tbody>
-        ${D.users.map((u, i) => `<tr><td><input class="input" data-us="${i}" data-k="emp" value="${esc(u.emp)}" ${dis}></td><td><input class="input" data-us="${i}" data-k="name" value="${esc(u.name)}" ${dis}></td>
+      <div class="dpanel cfg"><div class="dph"><h3>Usuarios · QORVEX y QORVEX MOBILE</h3><span class="muted small">Una sola lista para los dos programas · la contraseña se guarda cifrada</span><span class="sp"></span>${D.users.some((u) => u.status === 'pendiente') ? `<span class="pill warn">${D.users.filter((u) => u.status === 'pendiente').length} solicitud(es) de registro</span>` : ''}${ro ? '' : '<button class="btn sm" id="usAdd">+ Agregar usuario</button>'}</div>
+        <table class="t mini"><thead><tr><th>No. empleado</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Contraseña</th><th>Pedir cambio</th><th>Activo</th><th></th></tr></thead><tbody>
+        <tr class="muted"><td class="mono">ADMIN</td><td>Administrador maestro</td><td>Administrador</td><td><span class="pill ok">fija</span></td><td colspan="4" class="small">Cuenta de soporte integrada en el programa</td></tr>
+        ${D.users.map((u, i) => `<tr class="${u.status === 'pendiente' ? 'pend-row' : ''}"><td><input class="input" data-us="${i}" data-k="emp" value="${esc(u.emp)}" ${dis}></td><td><input class="input" data-us="${i}" data-k="name" value="${esc(u.name)}" ${dis}></td>
           <td><select class="input" data-us="${i}" data-k="role" ${dis}>${Object.entries(ROLE_N).map(([k, t]) => `<option value="${k}" ${u.role === k ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+          <td>${u.status === 'pendiente' ? `<span class="pill warn">Pendiente</span>${ro ? '' : ` <button class="btn sm primary" data-usok="${i}">Aprobar</button>`}` : '<span class="pill ok">Activo</span>'}</td>
           <td>${u.pw ? '<span class="pill ok">asignada</span>' : '<span class="pill warn">sin asignar</span>'} ${ro ? '' : `<button class="btn sm" data-uspw="${i}">${u.pw ? 'Cambiar' : 'Asignar'}</button>`}</td>
           <td><input type="checkbox" data-us="${i}" data-k="must" ${u.must ? 'checked' : ''} ${dis}></td>
-          <td><input type="checkbox" data-us="${i}" data-k="active" ${u.active ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-usdel="${i}">✕</button>`}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Sin usuarios. Las tabletas siguen usando los usuarios que ya tienen.</td></tr>'}
+          <td><input type="checkbox" data-us="${i}" data-k="active" ${u.active ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-usdel="${i}" title="${u.status === 'pendiente' ? 'Rechazar solicitud' : 'Quitar usuario'}">✕</button>`}</td></tr>`).join('')}
         </tbody></table>
-        <div class="muted small">Sin contraseña asignada, el usuario no puede entrar en una tableta nueva. Un usuario que ya existe en la tableta conserva su contraseña hasta que aquí se le asigne otra.</div></div>
+        <div class="muted small">Administrador: todo. Capturista: trabaja en QORVEX y QORVEX MOBILE, sin CONFIGURACIÓN ni usuarios. Validador: captura y exporta en QORVEX MOBILE; no entra a QORVEX. Quien se registra queda <b>Pendiente</b> hasta que lo apruebes (y guardes la configuración).</div></div>
+
+      <div class="dgrid cfg2">
+        <div class="dpanel cfg"><div class="dph"><h3>Fondo del inicio de sesión</h3><span class="muted small">Con marca CH</span></div>
+          <div class="walls">${[1, 2].map((n) => `<label class="wall ${D.brand.wall === n ? 'on' : ''}"><input type="radio" name="wall" value="${n}" ${D.brand.wall === n ? 'checked' : ''} ${dis}><img src="img/wall-${n}.jpg" alt="Fondo ${n}"><span>Fondo ${n}</span></label>`).join('')}</div></div>
+        <div class="dpanel cfg"><div class="dph"><h3>Logos de la empresa</h3><span class="muted small">Se imprimen en reportes · máximo 3</span><span class="sp"></span>${ro || D.brand.logos.length >= 3 ? '' : '<label class="btn sm">+ Cargar logo<input type="file" id="lgUp" accept="image/png,image/jpeg,image/svg+xml" hidden></label>'}</div>
+          <div class="logos">${D.brand.logos.map((src, i) => `<div class="logo-it"><img src="${src}" alt="Logo ${i + 1}">${ro ? '' : `<button class="btn sm" data-lgdel="${i}">✕</button>`}</div>`).join('') || '<div class="muted small">El programa no trae logos de empresa. Cárgalos aquí si quieres que salgan en los reportes impresos.</div>'}</div></div>
+      </div>
 
       <div class="dpanel cfg"><div class="dph"><h3>Motor</h3></div>
         <label class="lbl">Cerrar el modo Editor tras <input class="input num" type="number" min="5" step="5" id="idle" value="${D.motor.idleMin}" ${dis}> minutos sin movimiento</label></div>`;
     if (ro) return;
     const redraw = () => render(m);
+    const upd = () => { const e = $('#cfDirty', m); if (e) e.innerHTML = JSON.stringify(D) !== JSON.stringify(CFG) ? '<span class="pill warn">Cambios sin guardar · presiona Guardar configuración</span>' : ''; };
+    upd(); m.onchange = () => setTimeout(upd, 0);
     $$('[data-sh][data-k]', m).forEach((i) => (i.onchange = () => { D.shifts[+i.dataset.sh][i.dataset.k] = i.value; redraw(); }));
     $$('[data-sh][data-day]', m).forEach((i) => (i.onchange = () => { const x = D.shifts[+i.dataset.sh], d = +i.dataset.day; x.days = i.checked ? [...new Set([...x.days, d])] : x.days.filter((n) => n !== d); redraw(); }));
     $$('[data-sh][data-g]', m).forEach((i) => (i.onchange = () => { const [ty, u] = i.dataset.g.split('.'); D.shifts[+i.dataset.sh].goals[ty][u] = Math.max(0, parseInt(i.value, 10) || 0); }));
@@ -148,7 +198,11 @@
     bindList('sp', () => D.supervisors); bindList('ho', () => D.holidays); bindList('us', () => D.users);
     $('#spAdd').onclick = () => { D.supervisors.push({ emp: '', name: '', active: true }); redraw(); };
     $('#hoAdd').onclick = () => { D.holidays.push({ d: '', n: '' }); redraw(); };
-    $('#usAdd').onclick = () => { D.users.push({ emp: '', name: '', role: 'ambos', pw: '', pwAt: 0, must: true, active: true }); redraw(); };
+    $('#usAdd').onclick = () => { D.users.push({ emp: '', name: '', role: 'validador', pw: '', pwAt: 0, must: true, active: true, status: 'activo', created: Date.now(), by: '' }); redraw(); };
+    $$('[data-usok]', m).forEach((b) => (b.onclick = () => { D.users[+b.dataset.usok].status = 'activo'; redraw(); toast('Aprobado · presiona Guardar configuración', 'ok'); }));
+    $$('input[name=wall]', m).forEach((r) => (r.onchange = () => { D.brand.wall = +r.value; redraw(); }));
+    $$('[data-lgdel]', m).forEach((b) => (b.onclick = () => { D.brand.logos.splice(+b.dataset.lgdel, 1); redraw(); }));
+    if ($('#lgUp')) $('#lgUp').onchange = async (e) => { const f = e.target.files[0]; if (!f) return; try { D.brand.logos.push(await shrink(f)); redraw(); } catch (x) { toast(x.message, 'err'); } };
     $$('[data-uspw]', m).forEach((b) => (b.onclick = async () => {
       const u = D.users[+b.dataset.uspw];
       if (!u.emp) return toast('Primero escribe el No. de empleado', 'warn');
@@ -179,5 +233,5 @@
   }
   const discard = () => { D = null; };
 
-  App.cfg = { NAME, DAYS, ROLE_N, load, save, render, discard, shiftAt, opDate, hours, hasGoal, holiday, isoDay, hm, inShift, hashPw, get: () => CFG, get loaded() { return META.loaded; } };
+  App.cfg = { NAME, DAYS, ROLE_N, addPending, load, save, render, discard, shiftAt, opDate, hours, hasGoal, holiday, isoDay, hm, inShift, hashPw, get: () => CFG, get loaded() { return META.loaded; } };
 })(window.App);

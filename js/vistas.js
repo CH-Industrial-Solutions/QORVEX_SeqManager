@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    vistas.js — pantallas: Archivos, Planes, Pulls y resultado del guardado
    ===================================================================== */
@@ -68,11 +69,11 @@
     const dirty = S.planesDirty || S.pullsDirty || Object.values(S.dirty || {}).some(Boolean);
     root.innerHTML = `
       <header class="top">
-        <div class="brand" id="bHome" style="cursor:pointer" title="Inicio"><img src="img/q-mark-${isLight() ? 'light' : 'dark'}.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div><span class="ver">V 12.00.00</span></div>
+        <div class="brand" id="bHome" style="cursor:pointer" title="Inicio"><img src="img/q-mark-${isLight() ? 'light' : 'dark'}.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div><span class="ver">V 13.00.00</span></div>
         <span class="sp"></span>
         <a class="btn ghost xlink" href="${App.LINKS.mobile}" target="_blank" rel="noopener" title="Abrir QORVEX MOBILE en otra pestaña">QORVEX MOBILE ↗</a>
         <button class="tsw" id="bTheme" title="Cambiar a modo ${isLight() ? 'BLACK' : 'WHITE'}" aria-label="Cambiar tema"><span class="knob"><svg class="moon" viewBox="0 0 32 32" aria-hidden="true"><path d="M19.5 6.5a10 10 0 1 0 6 16.9A11.5 11.5 0 0 1 19.5 6.5z" fill="currentColor"/><path d="M23 7.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="currentColor"/><path d="M26.5 14.2l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" fill="currentColor"/></svg><svg class="sun" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="6.2" fill="currentColor"/><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M16 3.5v3.2M16 25.3v3.2M3.5 16h3.2M25.3 16h3.2M7.2 7.2l2.2 2.2M22.6 22.6l2.2 2.2M7.2 24.8l2.2-2.2M22.6 9.4l2.2-2.2"/></g></svg></span></button>
-        <div class="secs">${SEC.map(([k, t, d]) => `<button class="sbtn ${TAB === k ? 'on' : ''}" data-t="${k}" title="${d}">${t}</button>`).join('')}</div>
+        <div class="secs">${SEC.filter(([k]) => k !== 'config' || App.auth.isAdmin()).map(([k, t, d]) => `<button class="sbtn ${TAB === k ? 'on' : ''}" data-t="${k}" title="${d}">${t}</button>`).join('')}</div>
         ${S.dir ? `<div class="chip" title="Carpeta de trabajo">📁 ${esc(S.dir.name)}</div>` : ''}
         ${S.dir ? `<button class="btn ghost" id="bChange" title="Cambiar carpeta de trabajo">Carpeta</button>` : ''}
         ${App.lock.canEdit() || !App.lock.mode() ? `<button class="btn save ${dirty ? 'on' : ''}" id="bSave" ${App.S.L.planes && App.lock.canEdit() ? '' : 'disabled'}>${ICO.save}<span>Guardar${dirty ? ' •' : ''}</span></button>` : ''}
@@ -82,12 +83,13 @@
         ${App.lock.mode() ? `<span class="tabs-r"><button class="chip mode ${App.lock.canEdit() ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${App.lock.canEdit() ? `EDITOR · ${esc(App.lock.who())}` : 'CONSULTA · solo lectura'}</button><button class="btn ghost sm" id="bOut" title="Salir y liberar el modo Editor">Salir</button></span>` : ''}
       </nav>
       <main id="main"></main>
-      <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © TODOS LOS DERECHOS RESERVADOS · Ing. Carlos Hernandez</footer>
+      <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados · <a href="#" id="bLegal" style="color:inherit;text-decoration:underline">Aviso legal</a>${App.auth.user() ? ` &nbsp;|&nbsp; ${esc(App.auth.user().name)} · ${esc(App.auth.roleTxt(App.auth.user().role))}` : ''}</footer>
       <div id="toasts"></div>`;
     document.body.classList.toggle('fullview', TAB === 'planes' && PF.view === 'all' && !!S.result);
     $$('.tab,.sbtn').forEach((b) => (b.onclick = () => go(b.dataset.t)));
     if ($('#bChange')) $('#bChange').onclick = () => guardDirty().then((ok) => ok && App.connect(false));
     if ($('#bSave')) $('#bSave').onclick = saveDialog;
+    if ($('#bLegal')) $('#bLegal').onclick = (e) => { e.preventDefault(); App.legal.open(); };
     if ($('#bMode')) $('#bMode').onclick = async () => { if (App.lock.canEdit() && (S.planesDirty || S.pullsDirty || Object.values(S.dirty || {}).some(Boolean)) && !(await App.confirmBox('Cambiar de modo', '<p>Hay cambios sin guardar. Si cambias de modo se pierden.</p>', 'Cambiar de todos modos', 'danger'))) return; await App.lock.release(); await App.lock.enter(); };
     if ($('#bOut')) $('#bOut').onclick = async () => { if (App.lock.canEdit() && (S.planesDirty || S.pullsDirty || Object.values(S.dirty || {}).some(Boolean)) && !(await App.confirmBox('Salir', '<p>Hay cambios sin guardar. Si sales se pierden.</p>', 'Salir de todos modos', 'danger'))) return; App.lock.leave('out'); };
     $('#bHome').onclick = () => go('home');

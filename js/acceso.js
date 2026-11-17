@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    acceso.js — modo EDITOR / CONSULTA del Motor
    - Solo una persona a la vez puede entrar como Editor: al entrar se
@@ -37,21 +38,18 @@
     const S = App.S, cfg = App.cfg.get();
     const l = await readLock();
     const busy = fresh(l) && l.dev !== devId;
-    let last = ''; try { last = localStorage.getItem('qx_motor_who') || ''; } catch (e) {}
-    const names = [...cfg.supervisors.filter((s) => s.active).map((s) => s.name), ...cfg.users.filter((u) => u.active && u.role === 'admin').map((u) => u.name)];
-    const a = await App.modal({ title: 'Entrar a QORVEX', wide: true, body: `
+    const me = App.auth.user(), can = App.auth.canEditor();
+    const a = await App.modal({ title: `Entrar a QORVEX · ${esc(me ? me.name : '')}`, wide: true, body: `
       ${busy ? `<div class="banner warn"><b>${esc(l.who || 'Otra persona')}</b> está trabajando en QORVEX como <b>Editor</b> desde las ${fTime(l.since)} (última actividad ${fTime(l.beat)}). Puedes entrar en <b>modo Consulta</b> para ver la información y la productividad.</div>` : ''}
       <div class="opt-list">
-        <label class="opt ${busy ? 'dis' : ''}"><input type="radio" name="md" value="editor" ${busy ? 'disabled' : 'checked'}><span><b>Editor</b><br>
-          <small>Carga Planes, guarda en los archivos, corrige capturas y cambia la configuración. Solo una persona a la vez. Se cierra solo tras ${cfg.motor.idleMin} minutos sin movimiento.</small></span></label>
-        <label class="opt"><input type="radio" name="md" value="consulta" ${busy ? 'checked' : ''}><span><b>Consulta</b><br>
+        <label class="opt ${busy || !can ? 'dis' : ''}"><input type="radio" name="md" value="editor" ${busy || !can ? 'disabled' : 'checked'}><span><b>Editor</b><br>
+          <small>Carga Planes, guarda en los archivos, corrige capturas y agrega duplicados${App.auth.isAdmin() ? '; también CONFIGURACIÓN y usuarios' : ''}. Solo una persona a la vez. Se cierra solo tras ${cfg.motor.idleMin} minutos sin movimiento.</small></span></label>
+        <label class="opt"><input type="radio" name="md" value="consulta" ${busy || !can ? 'checked' : ''}><span><b>Consulta</b><br>
           <small>Ve DATA, dashboard, Validación, Secuencia y productividad. No guarda nada.</small></span></label>
-      </div>
-      <label class="lbl" style="margin-top:12px">Tu nombre <input class="input" id="mdWho" list="mdNames" value="${esc(last)}" placeholder="Nombre de quien entra" style="min-width:280px"></label>
-      <datalist id="mdNames">${names.map((n) => `<option value="${esc(n)}">`).join('')}</datalist>`,
-      buttons: [{ t: 'Entrar', cls: 'primary', fn: (el) => { const md = $('input[name=md]:checked', el).value, w = $('#mdWho', el).value.trim(); if (md === 'editor' && !w) { toast('Escribe tu nombre para entrar como Editor', 'warn'); return false; } return { md, w }; } }] });
-    const pick = a || { md: 'consulta', w: last };
-    M.who = pick.w; try { localStorage.setItem('qx_motor_who', M.who); } catch (e) {}
+      </div>`,
+      buttons: [{ t: 'Entrar', cls: 'primary', fn: (el) => ({ md: $('input[name=md]:checked', el).value }) }] });
+    const pick = a || { md: 'consulta' };
+    M.who = me ? `${me.name}${me.master ? '' : ` (${me.emp})`}` : '';
     if (pick.md === 'editor') {
       const l2 = await readLock(); // otra revisión justo antes de tomar el lugar
       if (fresh(l2) && l2.dev !== devId) { toast(`${l2.who} acaba de entrar como Editor. Entraste en modo Consulta.`, 'warn', 6000); M.mode = 'consulta'; }
@@ -76,7 +74,7 @@
     M.mode = '';
     // se descarta lo que no se guardó: la sesión vuelve a empezar desde la carpeta
     Object.assign(App.S, { L: {}, X: { val: [], seq: [] }, pulls: [], pullsDirty: false, result: null, planesDirty: false, dirty: {}, edits: [] });
-    App.corr.reset(); App.cfg.discard();
+    App.corr.reset(); App.cfg.discard(); App.auth.logout();
     $('#app').innerHTML = `<div class="nosupport closed"><h1>QORVEX se cerró</h1>
       <p>${reason === 'idle' ? `El modo Editor se cerró después de <b>${App.cfg.get().motor.idleMin} minutos sin movimiento</b> para que otra persona pueda entrar como Editor.` : 'Saliste de QORVEX.'}</p>
       <p class="muted">Lo que no se guardó se descartó. Los archivos de la carpeta no cambiaron.</p>

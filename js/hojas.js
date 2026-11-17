@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    hojas.js — VALIDATE y SEQUENCE: la hoja de Validación o Secuencia
    completa, tal cual está en el Excel (todas las columnas y filas), con

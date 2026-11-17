@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    integrar.js — "Integrar capturas exportadas" (de QORVEX MOBILE sin carpeta)
    - Lee uno o varios archivos QORVEX_captura_….xlsx (hojas Validacion y/o
