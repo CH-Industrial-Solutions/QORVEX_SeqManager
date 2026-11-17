@@ -269,7 +269,7 @@
   }
   /** Inicio rápido desde INICIO: conecta la carpeta, carga los archivos y ejecuta el cruce */
   async function quickStart(useSaved) {
-    if (!S.dir && !(await connect(useSaved, true))) return App.ui.render();
+    if ((!S.dir || !App.auth.user()) && !(await connect(useSaved, true))) return App.ui.render();
     const miss = ROLES.filter((r) => !r.optional && !r.manual && !r.txt && !S.roleFile[r.k]);
     if (miss.length) { toast(`No se reconoció el archivo de: ${miss.map((r) => r.t).join(', ')}. Asígnalo en Archivos.`, 'warn', 6000); return App.ui.go('files'); }
     if (!S.L.val || !S.L.seq) await loadAll();

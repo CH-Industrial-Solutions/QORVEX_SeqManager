@@ -79,7 +79,7 @@
       <p>${reason === 'idle' ? `El modo Editor se cerró después de <b>${App.cfg.get().motor.idleMin} minutos sin movimiento</b> para que otra persona pueda entrar como Editor.` : 'Saliste de QORVEX.'}</p>
       <p class="muted">Lo que no se guardó se descartó. Los archivos de la carpeta no cambiaron.</p>
       <button class="btn primary big" id="bBack">Volver a entrar</button></div>`;
-    $('#bBack').onclick = async () => { if (await App.connect(true, true)) App.ui.go('home'); };
+    $('#bBack').onclick = async () => { await App.quickStart(true); };
   }
 
   /* ---------- Latido e inactividad ---------- */

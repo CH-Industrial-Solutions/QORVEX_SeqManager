@@ -107,5 +107,26 @@
     });
   }
 
-  App.auth = { MASTER_EMP: MASTER.emp, user, isAdmin, canEditor, ensure, show, logout, roleTxt, wall };
+  /** Primera pantalla: sin sesión no se ve nada. Para iniciar sesión primero se conecta la carpeta (ahí están los usuarios). */
+  async function gate() {
+    if (ME) return;
+    const saved = App.S.savedDir;
+    $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/wall-${wall()}.jpg')">
+      <div class="lg-card">
+        <div class="lg-brand"><img src="img/qorvex-logo-${App.ui && App.ui.isLight && App.ui.isLight() ? 'light' : 'dark'}.png" alt="QORVEX"></div>
+        <div class="lg-pane" style="width:100%">
+          <h2>Iniciar sesión</h2>
+          <p class="muted">Primero conecta la carpeta compartida <b>Data Base</b>: ahí están los usuarios, la configuración y las capturas.</p>
+          ${saved ? `<button class="btn primary big" id="gRe" type="button">Reconectar «${esc(saved.name)}»</button><button class="btn big" id="gPick" type="button">Elegir otra carpeta</button>`
+            : '<button class="btn primary big" id="gPick" type="button">Seleccionar carpeta Data Base</button>'}
+        </div>
+        <div class="lg-foot"><a href="#" data-legal>Aviso legal · Términos · Privacidad</a><span>${esc(App.legal.FOOT)}</span></div>
+      </div></div>`;
+    $$('[data-legal]').forEach((a) => (a.onclick = (e) => { e.preventDefault(); App.legal.open(); }));
+    const go = async (useSaved) => { await App.quickStart(useSaved); if (!ME) gate(); };
+    if ($('#gRe')) $('#gRe').onclick = () => go(true);
+    $('#gPick').onclick = () => go(false);
+  }
+
+  App.auth = { gate, MASTER_EMP: MASTER.emp, user, isAdmin, canEditor, ensure, show, logout, roleTxt, wall };
 })(window.App);

@@ -58,6 +58,7 @@
   function go(t) { TAB = t; render(); }
 
   function render() {
+    if (App.fs.supported() && !App.auth.user()) return App.auth.gate(); // nada se ve sin iniciar sesión
     const S = App.S, root = $('#app');
     if (!App.fs.supported()) {
       root.innerHTML = `<div class="nosupport"><h1>Navegador no compatible</h1>

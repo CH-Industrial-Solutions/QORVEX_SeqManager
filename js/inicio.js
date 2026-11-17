@@ -18,7 +18,7 @@
         <div class="w-sub">CONNECT · VALIDATE · SEQUENCE · OPTIMIZE</div>
         <div class="w-load"><i></i></div>
       </div>
-      <div class="w-foot"><span>${now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${pad(h)}:${pad(now.getMinutes())}</span><span>QORVEX · Ing. Carlos Hernandez</span></div>`;
+      <div class="w-foot"><span>${now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${pad(h)}:${pad(now.getMinutes())}</span><span>QORVEX · © 2026 CH Industrial Solutions</span></div>`;
     document.body.append(w, flash);
     setTimeout(() => flash.remove(), 900);
     let done = false;
