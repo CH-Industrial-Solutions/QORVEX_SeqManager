@@ -2,7 +2,7 @@
 /* =====================================================================
    duplicados.js — "Agregar duplicado" (solo QORVEX, modo Editor)
    En QORVEX MOBILE un job no se puede repetir (salvo Switch Ch / Gde hasta
-   4 veces). Si un job SÍ llega repetido de verdad, el de QORVEX lo agrega
+   5 veces). Si un job SÍ llega repetido de verdad, el de QORVEX lo agrega
    aquí con un motivo obligatorio. Se escribe al final de
    Validacion_MOTOR_aaaa-mm.txt / Secuencia_MOTOR_… con Duplicado = Sí.
    ===================================================================== */

@@ -101,3 +101,4 @@ tr.pend-row td{background:#FFF8E6}
 .lg-2 > label{min-width:0}.lg-pane .input{width:100%;box-sizing:border-box;min-width:0}
 @media (max-width:1560px){.top .ver{display:none}.top .sbtn{padding-left:14px;padding-right:14px}.top a.xlink{padding-left:10px;padding-right:10px}}
 @media (max-width:1300px){.top a.xlink{display:none}}
+.lbchk{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;cursor:pointer}

@@ -194,6 +194,9 @@
         </div>
         <div class="muted small">El prefijo (1 a 4 letras) es el inicio del ID: AA001, AA002… Al llegar a 999 pasa solo al siguiente (AB). Si cambias un prefijo, los consecutivos que ya existen siguen con el suyo. Desactivar oculta el componente o la línea al generar, sin borrar el historial.</div></div>
 
+      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.02.00</span></div>
+        <div class="about"><img src="img/favicon-ch-180.png" alt="CH Industrial Solutions"><div><b>Desarrollado por CH Industrial Solutions</b><br>Titular: Ing. Carlos Alberto Hernández Hernández<br>charliealberth290116@outlook.es · 8115377033 · General Escobedo, Nuevo León, México</div></div></div>
+
       <div class="dpanel cfg"><div class="dph"><h3>Motor</h3></div>
         <label class="lbl">Cerrar el modo Editor tras <input class="input num" type="number" min="5" step="5" id="idle" value="${D.motor.idleMin}" ${dis}> minutos sin movimiento</label></div>`;
     if (ro) return;
