@@ -77,7 +77,7 @@
     const dirty = S.planesDirty || S.pullsDirty || Object.values(S.dirty || {}).some(Boolean);
     root.innerHTML = `
       <header class="top">
-        <div class="brand" id="bHome" style="cursor:pointer" title="Inicio"><img src="img/q-mark-${isLight() ? 'light' : 'dark'}.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div><span class="ver">V 13.00.00</span></div>
+        <div class="brand" id="bHome" style="cursor:pointer" title="Inicio"><img src="img/q-mark-${isLight() ? 'light' : 'dark'}.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div><span class="ver">V 13.01.00</span></div>
         <span class="sp"></span>
         <a class="btn ghost xlink" href="${App.LINKS.mobile}" target="_blank" rel="noopener" title="Abrir QORVEX MOBILE en otra pestaña">QORVEX MOBILE ↗</a>
         <button class="tsw" id="bTheme" title="Cambiar a modo ${isLight() ? 'BLACK' : 'WHITE'}" aria-label="Cambiar tema"><span class="knob"><svg class="moon" viewBox="0 0 32 32" aria-hidden="true"><path d="M19.5 6.5a10 10 0 1 0 6 16.9A11.5 11.5 0 0 1 19.5 6.5z" fill="currentColor"/><path d="M23 7.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="currentColor"/><path d="M26.5 14.2l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" fill="currentColor"/></svg><svg class="sun" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="6.2" fill="currentColor"/><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M16 3.5v3.2M16 25.3v3.2M3.5 16h3.2M25.3 16h3.2M7.2 7.2l2.2 2.2M22.6 22.6l2.2 2.2M7.2 24.8l2.2-2.2M22.6 9.4l2.2-2.2"/></g></svg></span></button>
@@ -91,7 +91,7 @@
         ${App.lock.mode() ? `<span class="tabs-r"><button class="chip mode ${App.lock.canEdit() ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${App.lock.canEdit() ? `EDITOR · ${esc(App.lock.who())}` : 'CONSULTA · solo lectura'}</button><button class="btn ghost sm" id="bOut" title="Salir y liberar el modo Editor">Salir</button></span>` : ''}
       </nav>
       <main id="main"></main>
-      <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados · <a href="#" id="bLegal" style="color:inherit;text-decoration:underline">Aviso legal</a>${App.auth.user() ? ` &nbsp;|&nbsp; ${esc(App.auth.user().name)} · ${esc(App.auth.roleTxt(App.auth.user().role))}` : ''}</footer>
+      <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados · V 13.01 (con ETIQUETAS) · <a href="#" id="bLegal" style="color:inherit;text-decoration:underline">Aviso legal</a>${App.auth.user() ? ` &nbsp;|&nbsp; ${esc(App.auth.user().name)} · ${esc(App.auth.roleTxt(App.auth.user().role))}` : ''}</footer>
       <div id="toasts"></div>`;
     document.body.classList.toggle('fullview', TAB === 'planes' && PF.view === 'all' && !!S.result);
     $$('.tab,.sbtn').forEach((b) => (b.onclick = () => go(b.dataset.t)));
