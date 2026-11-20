@@ -38,6 +38,7 @@
     o.holidays = (o.holidays || []).filter((h) => /^\d{4}-\d{2}-\d{2}$/.test(h.d)).map((h) => ({ d: h.d, n: String(h.n || '').trim() })).sort((a, b) => a.d.localeCompare(b.d));
     o.motor = { idleMin: Math.max(5, +(o.motor && o.motor.idleMin) || 30) };
     o.brand = { wall: (o.brand && +o.brand.wall === 2) ? 2 : 1, logos: ((o.brand && o.brand.logos) || []).filter((x) => /^data:image\//.test(x)).slice(0, 3) };
+    o.labels = window.QXLabels ? window.QXLabels.norm(o) : (o.labels || {}); // etiquetas 6×4: componentes, prefijos, líneas, logo
     return o;
   }
 
@@ -128,7 +129,7 @@
     const dis = ro ? 'disabled' : '';
     const cov = (() => { const cnt = new Array(1440).fill(0); D.shifts.forEach((x) => { for (let k = 0; k < 1440; k++) if (inShift(x, k)) cnt[k]++; }); return { gaps: cnt.filter((c) => !c).length, over: cnt.filter((c) => c > 1).length }; })();
     m.innerHTML = `
-      <div class="ptitle"><h1>CONFIGURACIÓN <small>Turnos, metas, supervisores y usuarios</small></h1>
+      <div class="ptitle"><h1>CONFIGURACIÓN <small>Turnos, metas, supervisores, usuarios y etiquetas</small></h1>
         <span class="muted">${META.loaded ? `${esc(NAME)} · ${CFG.updated ? `guardado ${App.fDT(new Date(CFG.updated).getTime())}${CFG.by ? ` por ${esc(CFG.by)}` : ''}` : ''}` : 'Aún no existe Config_QORVEX.json: se crea al guardar'}</span>
         <span class="sp"></span><span id="cfDirty"></span>${ro ? '<span class="pill warn">Modo consulta: solo lectura</span>' : '<button class="btn" id="cfReset">Descartar cambios</button><button class="btn primary" id="cfSave">Guardar configuración</button>'}</div>
       <div class="note">QORVEX MOBILE toma de aquí los turnos, los usuarios y los supervisores cada vez que se conecta a la carpeta.</div>
@@ -180,6 +181,19 @@
           <div class="logos">${D.brand.logos.map((src, i) => `<div class="logo-it"><img src="${src}" alt="Logo ${i + 1}">${ro ? '' : `<button class="btn sm" data-lgdel="${i}">✕</button>`}</div>`).join('') || '<div class="muted small">El programa no trae logos de empresa. Cárgalos aquí si quieres que salgan en los reportes impresos.</div>'}</div></div>
       </div>
 
+      <div class="dpanel cfg"><div class="dph"><h3>Etiquetas 6 × 4</h3><span class="muted small">Componentes, prefijos y líneas · QORVEX y QORVEX MOBILE</span><span class="sp"></span>
+          <label class="lbchk"><input type="checkbox" id="lbLogo" ${D.labels.logo ? 'checked' : ''} ${dis}> Logo QORVEX en la etiqueta</label></div>
+        <div class="dgrid cfg2">
+          <div><table class="t mini"><thead><tr><th>Componente</th><th>Prefijo</th><th>Activo</th><th></th></tr></thead><tbody>
+            ${D.labels.comps.map((c, i) => `<tr><td><input class="input" data-lc="${i}" data-k="n" value="${esc(c.n)}" maxlength="40" ${dis}></td><td><input class="input" data-lc="${i}" data-k="p" value="${esc(c.p)}" maxlength="4" style="text-transform:uppercase;width:80px" ${dis}></td>
+              <td><input type="checkbox" data-lc="${i}" data-k="a" ${c.a ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-lcdel="${i}">✕</button>`}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sin componentes.</td></tr>'}
+          </tbody></table>${ro ? '' : '<button class="btn sm" id="lcAdd">+ Componente</button>'}</div>
+          <div><table class="t mini"><thead><tr><th>Línea</th><th>Activa</th><th></th></tr></thead><tbody>
+            ${D.labels.lines.map((l, i) => `<tr><td><input class="input" data-ll="${i}" data-k="l" value="${esc(l.l)}" maxlength="10" ${dis}></td><td><input type="checkbox" data-ll="${i}" data-k="a" ${l.a ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-lldel="${i}">✕</button>`}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sin líneas.</td></tr>'}
+          </tbody></table>${ro ? '' : '<button class="btn sm" id="llAdd">+ Línea</button>'}</div>
+        </div>
+        <div class="muted small">El prefijo (1 a 4 letras) es el inicio del ID: AA001, AA002… Al llegar a 999 pasa solo al siguiente (AB). Si cambias un prefijo, los consecutivos que ya existen siguen con el suyo. Desactivar oculta el componente o la línea al generar, sin borrar el historial.</div></div>
+
       <div class="dpanel cfg"><div class="dph"><h3>Motor</h3></div>
         <label class="lbl">Cerrar el modo Editor tras <input class="input num" type="number" min="5" step="5" id="idle" value="${D.motor.idleMin}" ${dis}> minutos sin movimiento</label></div>`;
     if (ro) return;
@@ -212,6 +226,13 @@
       u.pw = await hashPw(u.emp, pw); u.pwAt = Date.now();
       toast('Contraseña asignada · se aplica al guardar la configuración', 'ok'); redraw();
     }));
+    $('#lbLogo').onchange = (e) => { D.labels.logo = e.target.checked; };
+    $$('[data-lc][data-k]', m).forEach((i) => (i.onchange = () => { const o = D.labels.comps[+i.dataset.lc], k = i.dataset.k; o[k] = k === 'a' ? i.checked : k === 'p' ? i.value.trim().toUpperCase() : i.value; }));
+    $$('[data-ll][data-k]', m).forEach((i) => (i.onchange = () => { const o = D.labels.lines[+i.dataset.ll]; o[i.dataset.k] = i.dataset.k === 'a' ? i.checked : i.value.trim(); }));
+    $$('[data-lcdel]', m).forEach((b) => (b.onclick = () => { D.labels.comps.splice(+b.dataset.lcdel, 1); redraw(); }));
+    $$('[data-lldel]', m).forEach((b) => (b.onclick = () => { D.labels.lines.splice(+b.dataset.lldel, 1); redraw(); }));
+    $('#lcAdd').onclick = () => { D.labels.comps.push({ n: '', p: '', a: true }); redraw(); };
+    $('#llAdd').onclick = () => { D.labels.lines.push({ l: '', a: true }); redraw(); };
     $('#idle').onchange = (e) => { D.motor.idleMin = Math.max(5, parseInt(e.target.value, 10) || 30); };
     $('#cfReset').onclick = () => { D = null; redraw(); };
     $('#cfSave').onclick = async () => {
@@ -226,6 +247,10 @@
       if (D.users.some((u) => !u.emp || !u.name)) err.push('Cada usuario necesita No. de empleado y nombre.');
       if (dupe(D.users.map((u) => u.emp))) err.push('Hay usuarios con el mismo No. de empleado.');
       if (D.holidays.some((h) => !/^\d{4}-\d{2}-\d{2}$/.test(h.d))) err.push('Cada festivo necesita fecha.');
+      if (D.labels.comps.some((c) => !String(c.n).trim() || !/^[A-Z]{1,4}$/.test(c.p))) err.push('Etiquetas: cada componente necesita nombre y un prefijo de 1 a 4 letras.');
+      if (dupe(D.labels.comps.map((c) => String(c.n).trim().toLowerCase())) || dupe(D.labels.comps.map((c) => c.p))) err.push('Etiquetas: hay componentes o prefijos repetidos.');
+      if (D.labels.lines.some((l) => !String(l.l).trim())) err.push('Etiquetas: cada línea necesita identificador.');
+      if (dupe(D.labels.lines.map((l) => String(l.l).trim()))) err.push('Etiquetas: hay líneas repetidas.');
       if (err.length) return App.modal({ title: 'Revisa la configuración', body: `<ul class="errs">${err.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>` });
       try { await App.busy('Guardando configuración…', () => save(D)); D = null; toast('Configuración guardada. Las tabletas la toman al conectarse.', 'ok', 5000); if (App.S.result) App.ui.render(); else redraw(); }
       catch (e) { toast(e.message, 'err', 7000); }

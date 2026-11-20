@@ -13,12 +13,13 @@
     ['dash', 'DASHBOARD', 'Material disponible'],
     ['pulls', 'PULLS', 'Lista de pulls'],
     ['prod', 'PRODUCTIVIDAD', 'Turnos y personas'],
+    ['lbl', 'ETIQUETAS', 'Impresión 6 × 4'],
   ];
   const SEC = [    // secundarios (botones en la barra superior)
     ['val', 'VALIDATE', 'Excel de Validación completo'],
     ['seq', 'SEQUENCE', 'Excel de Secuencia completo'],
     ['files', 'ARCHIVOS', 'Archivos y carpeta de trabajo'],
-    ['config', 'CONFIG', 'Turnos, metas, supervisores y usuarios'],
+    ['config', 'CONFIG', 'Turnos, metas, supervisores, usuarios y etiquetas'],
   ];
   /* Íconos (SVG en línea, toman el color del texto) */
   const sv = (d, f) => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true" ${f ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"'}>${d}</svg>`;
@@ -40,6 +41,7 @@
     play: sv('<path d="M7 4.5v15l12.5-7.5z"/>', 1),
     bulb: sv('<path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.8.6 1.3 1.5 1.3 2.5V18h5v-1.2c0-1 .5-1.9 1.3-2.5A6.5 6.5 0 0 0 12 2.5z"/><rect x="9.5" y="19.3" width="5" height="2.2" rx="1"/>', 1),
   };
+  ICO.lbl = sv('<path d="M3.5 4.5h9.2l7.8 7.8-8.2 8.2-7.8-7.8V4.5z"/><circle cx="8" cy="9" r="1.8" fill="#fff" stroke="none"/>', 1);
   ICO.val = ICO.check; ICO.seq = ICO.flow; ICO.cube = ICO.pulls; ICO.prod = ICO.trend;
   const isLight = () => document.documentElement.dataset.theme === 'light';
   function setTheme(th) { document.documentElement.dataset.theme = th; try { localStorage.setItem('qorvex_theme', th); } catch (e) {} }
@@ -55,6 +57,11 @@
   ];
   const BASE = ['aor', 'job', 'ls', 'cia'];
 
+  /* Contexto para el módulo compartido de etiquetas (js/etiquetas.js) */
+  const LBLCTX = {
+    dir: () => App.S.dir, dev: () => 'MOTOR', user: () => App.auth.user(), isAdmin: () => App.auth.isAdmin(), cfg: () => App.cfg.get(),
+    toast: (m, t, ms) => App.toast(m, t, ms), confirm: (t, h, ok) => App.confirmBox(t, h, ok || 'Aceptar', 'primary'), ui: { panel: 'dpanel', head: 'dph' },
+  };
   function go(t) { TAB = t; render(); }
 
   function render() {
@@ -70,7 +77,7 @@
     const dirty = S.planesDirty || S.pullsDirty || Object.values(S.dirty || {}).some(Boolean);
     root.innerHTML = `
       <header class="top">
-        <div class="brand" id="bHome" style="cursor:pointer" title="Inicio"><img src="img/q-mark-${isLight() ? 'light' : 'dark'}.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div><span class="ver">V 13.00.00</span></div>
+        <div class="brand" id="bHome" style="cursor:pointer" title="Inicio"><img src="img/q-mark-${isLight() ? 'light' : 'dark'}.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div><span class="ver">V 13.01.00</span></div>
         <span class="sp"></span>
         <a class="btn ghost xlink" href="${App.LINKS.mobile}" target="_blank" rel="noopener" title="Abrir QORVEX MOBILE en otra pestaña">QORVEX MOBILE ↗</a>
         <button class="tsw" id="bTheme" title="Cambiar a modo ${isLight() ? 'BLACK' : 'WHITE'}" aria-label="Cambiar tema"><span class="knob"><svg class="moon" viewBox="0 0 32 32" aria-hidden="true"><path d="M19.5 6.5a10 10 0 1 0 6 16.9A11.5 11.5 0 0 1 19.5 6.5z" fill="currentColor"/><path d="M23 7.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="currentColor"/><path d="M26.5 14.2l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" fill="currentColor"/></svg><svg class="sun" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="6.2" fill="currentColor"/><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M16 3.5v3.2M16 25.3v3.2M3.5 16h3.2M25.3 16h3.2M7.2 7.2l2.2 2.2M22.6 22.6l2.2 2.2M7.2 24.8l2.2-2.2M22.6 9.4l2.2-2.2"/></g></svg></span></button>
@@ -84,7 +91,7 @@
         ${App.lock.mode() ? `<span class="tabs-r"><button class="chip mode ${App.lock.canEdit() ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${App.lock.canEdit() ? `EDITOR · ${esc(App.lock.who())}` : 'CONSULTA · solo lectura'}</button><button class="btn ghost sm" id="bOut" title="Salir y liberar el modo Editor">Salir</button></span>` : ''}
       </nav>
       <main id="main"></main>
-      <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados · <a href="#" id="bLegal" style="color:inherit;text-decoration:underline">Aviso legal</a>${App.auth.user() ? ` &nbsp;|&nbsp; ${esc(App.auth.user().name)} · ${esc(App.auth.roleTxt(App.auth.user().role))}` : ''}</footer>
+      <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados · V 13.01 (con ETIQUETAS) · <a href="#" id="bLegal" style="color:inherit;text-decoration:underline">Aviso legal</a>${App.auth.user() ? ` &nbsp;|&nbsp; ${esc(App.auth.user().name)} · ${esc(App.auth.roleTxt(App.auth.user().role))}` : ''}</footer>
       <div id="toasts"></div>`;
     document.body.classList.toggle('fullview', TAB === 'planes' && PF.view === 'all' && !!S.result);
     $$('.tab,.sbtn').forEach((b) => (b.onclick = () => go(b.dataset.t)));
@@ -97,7 +104,7 @@
     $('#bTheme').onclick = () => { setTheme(isLight() ? 'dark' : 'light'); render(); };
     ({ home: () => App.mods.home($('#main')), files: vFiles, planes: vPlanes, pulls: vPulls, dash: () => App.dash.render($('#main')),
       val: () => App.hojas.render($('#main'), 'val'), seq: () => App.hojas.render($('#main'), 'seq'),
-      prod: () => App.prod.render($('#main')), config: () => App.cfg.render($('#main')) })[TAB]();
+      prod: () => App.prod.render($('#main')), lbl: () => window.QXLabels.render($('#main'), LBLCTX), config: () => App.cfg.render($('#main')) })[TAB]();
   }
 
   async function guardDirty() {
