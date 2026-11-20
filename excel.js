@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    excel.js — lectura y escritura de libros con SheetJS
    Se usa la edición "xlsx-js-style" (SheetJS 0.18.5 + escritura de estilos)

@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    inicio.js — bienvenida al abrir: destello breve + saludo según la hora
    (sin usuario ni contraseña). Toca la pantalla para saltarla.
@@ -17,7 +18,7 @@
         <div class="w-sub">CONNECT · VALIDATE · SEQUENCE · OPTIMIZE</div>
         <div class="w-load"><i></i></div>
       </div>
-      <div class="w-foot"><span>${now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${pad(h)}:${pad(now.getMinutes())}</span><span>QORVEX · Ing. Carlos Hernandez</span></div>`;
+      <div class="w-foot"><span>${now.toLocaleDateString('es-MX', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })} · ${pad(h)}:${pad(now.getMinutes())}</span><span>QORVEX · © 2026 CH Industrial Solutions</span></div>`;
     document.body.append(w, flash);
     setTimeout(() => flash.remove(), 900);
     let done = false;

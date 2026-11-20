@@ -16,3 +16,7 @@ Publicado en GitHub Pages: https://charliealberth2805-svg.github.io/QORVEX/
 - Datos: nunca en este repositorio; viven en la carpeta Data Base (TXT de capturas, Excel de Planes/Pulls, Config_QORVEX.json).
 
 QORVEX MOBILE: https://charliealberth2805-svg.github.io/Qorvex-Mobile/
+
+
+## Etiquetas 6 × 4
+Pestaña **ETIQUETAS** (misma en QORVEX y QORVEX MOBILE): genera, imprime, reimprime y anula etiquetas de Validación, Secuencia y Línea. Registro en TXT dentro de `Data Base/Etiquetas/`; los consecutivos se reservan con candado para que dos equipos nunca saquen el mismo ID. Código compartido: `js/etiquetas.js` (en MOBILE va incluido dentro de `index.html`). Código de barras Code 128 propio, sin librerías externas.

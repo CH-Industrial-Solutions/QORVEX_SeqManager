@@ -1,3 +1,4 @@
+/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    impresion.js — Hoja de secuencia para imprimir (tamaño carta)
    Sale de la lista de DATA (orden de la hoja Planes: AOR, JOB, LS, CIA).
@@ -68,7 +69,7 @@
     const html = pages.map((pg, pi) => `
       <section class="ppage">
         <header class="phead">
-          <img class="plogo" src="img/sese-logo.png" alt="Sesé">
+          ${(App.cfg.get().brand.logos || []).length ? `<span class="plogos">${App.cfg.get().brand.logos.map((src) => `<img class="plogo" src="${src}" alt="Logo">`).join('')}</span>` : '<span class="plogos"></span>'}
           <div class="ptitle"><h1>Hoja de secuencia</h1><div class="pcomp">${esc(b.comp.t)}</div></div>
           <div class="pqv">QORVEX<small>Manufacturing Intelligence Engine</small></div>
         </header>
