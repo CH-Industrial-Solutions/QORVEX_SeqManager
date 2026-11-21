@@ -26,7 +26,7 @@
   /** Validación o Secuencia: archivo principal + bases de las tabletas */
   const srcs = (role) => [S.L[role], ...((S.X && S.X[role]) || [])].filter(Boolean);
   const srcT = (role) => srcs(role).map((L) => L.t);
-  const runCruce = () => App.motor.run({ planes: S.L.planes.t, val: srcT('val'), seq: srcT('seq'), pulls: S.pulls });
+  const runCruce = () => App.motor.run({ planes: S.L.planes.t, val: srcT('val'), seq: srcT('seq'), pulls: S.pulls, dev: (App.dev && App.dev.recs) || [] });
   App.S = S; App.ROLES = ROLES;
 
   /* ---------- Carpeta ---------- */
@@ -157,6 +157,8 @@
     await App.busy('Leyendo archivos…', async () => {
       await refreshList(); await App.cfg.load();
       for (const r of ROLES) { if (r.manual) continue; try { await loadRole(r.k); } catch (e) { errs.push(e.message); delete S.L[r.k]; } }
+      try { await App.dev.load(); } catch (e) { errs.push(`Devoluciones: ${e.message}`); }
+      try { await App.ent.load(true); } catch (e) { /* Entregas es opcional */ }
     });
     if (errs.length) await App.modal({ title: 'Algunos archivos no se cargaron', body: `<ul class="errs">${errs.map((e) => `<li>${App.esc(e)}</li>`).join('')}</ul>` });
     else toast('Archivos cargados', 'ok');

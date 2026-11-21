@@ -14,6 +14,8 @@
     ['pulls', 'PULLS', 'Lista de pulls'],
     ['prod', 'PRODUCTIVIDAD', 'Turnos y personas'],
     ['lbl', 'ETIQUETAS', 'Impresión 6 × 4'],
+    ['inv', 'INVENTARIO', 'Confirmación física'],
+    ['rep', 'REPORTES', 'External Sequence Status'],
   ];
   const SEC = [    // secundarios (botones en la barra superior)
     ['val', 'VALIDATE', 'Excel de Validación completo'],
@@ -41,6 +43,8 @@
     play: sv('<path d="M7 4.5v15l12.5-7.5z"/>', 1),
     bulb: sv('<path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.8.6 1.3 1.5 1.3 2.5V18h5v-1.2c0-1 .5-1.9 1.3-2.5A6.5 6.5 0 0 0 12 2.5z"/><rect x="9.5" y="19.3" width="5" height="2.2" rx="1"/>', 1),
   };
+  ICO.inv = sv('<path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/><path d="M8 5.3l8 4.5"/>');
+  ICO.rep = sv('<path d="M6 3h9l4 4v14H6z"/><path d="M14.5 3v4.5H19"/><path d="M9 17v-3M12 17v-6M15 17v-4"/>');
   ICO.lbl = sv('<path d="M3.5 4.5h9.2l7.8 7.8-8.2 8.2-7.8-7.8V4.5z"/><circle cx="8" cy="9" r="1.8" fill="#fff" stroke="none"/>', 1);
   ICO.menu = sv('<path d="M4 6h16M4 12h16M4 18h16"/>');
   ICO.files = sv('<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/>');
@@ -98,8 +102,8 @@
         <div class="sd-top"><button class="sd-tg" id="bSide" title="${SIDE.min ? 'Mostrar menú con nombres' : 'Mostrar solo íconos'}" aria-label="Mostrar u ocultar nombres del menú">${ICO.menu}</button></div>
         <div class="sd-brand" id="bHome" title="Inicio"><img src="img/q-mark-dark.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div></div>
         <nav class="sd-nav">
-          ${group('Operación', ['home', 'planes', 'dash', 'pulls', 'lbl'])}
-          ${group('Indicadores', ['prod'])}
+          ${group('Operación', ['home', 'planes', 'dash', 'pulls', 'inv', 'lbl'])}
+          ${group('Indicadores', ['prod', 'rep'])}
           ${group('Registros', ['val', 'seq'])}
           ${group('Sistema', ['files', admin ? 'config' : null])}
           <a class="sd-it" href="${App.LINKS.mobile}" target="_blank" rel="noopener" title="Abrir QORVEX MOBILE en otra pestaña">${ICO.mobile}<span class="tx"><b>QORVEX MOBILE ↗</b><small>Abrir en otra pestaña</small></span></a>
@@ -109,7 +113,7 @@
           ${mode ? `<button class="sd-btn sd-mode ${canEd ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${canEd ? ICO.pen : ICO.eye}<span class="tx">${canEd ? 'Editor' : 'Consulta'}</span></button>` : ''}
           <button class="sd-btn" id="bTheme" title="Cambiar a tema ${isLight() ? 'oscuro' : 'claro'}">${isLight() ? ICO.sun : ICO.moon}<span class="tx">Tema ${isLight() ? 'claro' : 'oscuro'}</span></button>
           ${mode ? `<button class="sd-btn" id="bOut" title="Cerrar sesión y liberar el modo Editor">${ICO.out}<span class="tx">Cerrar sesión</span></button>` : ''}
-          <div class="sd-ver">V 13.02.00</div>
+          <div class="sd-ver">V 13.04.00</div>
         </div>
       </aside>
       <div class="mwrap">
@@ -137,7 +141,7 @@
     $('#bTheme').onclick = () => { setTheme(isLight() ? 'dark' : 'light'); render(); };
     ({ home: () => App.mods.home($('#main')), files: vFiles, planes: vPlanes, pulls: vPulls, dash: () => App.dash.render($('#main')),
       val: () => App.hojas.render($('#main'), 'val'), seq: () => App.hojas.render($('#main'), 'seq'),
-      prod: () => App.prod.render($('#main')), lbl: () => window.QXLabels.render($('#main'), LBLCTX), config: () => App.cfg.render($('#main')) })[TAB]();
+      prod: () => App.prod.render($('#main')), lbl: () => window.QXLabels.render($('#main'), LBLCTX), inv: () => App.inv.render($('#main')), rep: () => App.ess.render($('#main')), config: () => App.cfg.render($('#main')) })[TAB]();
   }
 
   async function guardDirty() {
@@ -427,11 +431,16 @@
     if (BASE.includes(k)) return `<td class="${k === 'job' ? 'b' : ''}">${esc(show(x.base[k]))}</td>`;
     const v = x.out[k];
     if (k === 'estado') return `<td><div class="est" title="${x.onHand} de 6 componentes on hand">${[0, 1, 2, 3, 4, 5].map((i) => `<i class="${i < x.onHand ? 'on' : ''}"></i>`).join('')}<span>${x.onHand}/6</span></div></td>`;
+    if (x.entj && x.entj[k] && (v === App.motor.SHORT || v === App.motor.PEND)) { const ej = x.entj[k]; return `<td class="deliv entj" title="Entrega por job · ${esc(ej.fecha || '')} ${esc(String(ej.hora || '').slice(0, 5))}${ej.name ? ` · ${esc(ej.name)}` : ''} · ${esc(ej.dev)}${ej.motivo ? ` · ${esc(ej.motivo)}` : ''}">ENTREGADO</td>`; }
     if (v === App.motor.SHORT) return '<td class="short">SHORTAGE</td>';
     if (v === App.motor.PEND) return '<td class="pendc">PENDIENTE</td>';
     if (k === 'start' && typeof v === 'number') return `<td>${App.fSerial(v)}</td>`;
     const en = DELIV.has(k) && v != null && v !== '' && App.ent && App.ent.get(v);
-    if (en) return `<td class="deliv" title="${esc(show(v))} · Entregado ${esc(en.fecha)}${en.name ? ` · ${esc(en.name)}` : ''}${en.com ? ` · ${esc(en.com)}` : ''}">ENTREGADO</td>`;
+    const ej = x.entj && x.entj[k];
+    if (ej) return `<td class="deliv entj" title="Entrega por job · ${esc(ej.fecha || '')} ${esc(String(ej.hora || '').slice(0, 5))}${ej.name ? ` · ${esc(ej.name)}` : ''} · ${esc(ej.dev)}${ej.motivo ? ` · ${esc(ej.motivo)}` : ''}${v != null && v !== '' && v !== App.motor.SHORT ? ` · caja ${esc(show(v))}` : ''}">ENTREGADO</td>`;
+    const dv = x.dev && x.dev[k];
+    if (dv && !en) return `<td class="devc" title="Devolución de línea · caja ${esc(show(v))} · ${esc(dv.fecha || '')} ${esc(String(dv.hora || '').slice(0, 5))}${dv.name ? ` · ${esc(dv.name)}` : ''} · ${esc(dv.dev)}">${esc(show(v))} · DEV</td>`;
+    if (en) return `<td class="deliv" title=""${esc(show(v))} · Entregado ${esc(en.fecha)}${en.name ? ` · ${esc(en.name)}` : ''}${en.com ? ` · ${esc(en.com)}` : ''}">ENTREGADO</td>`;
     const al = x.alert[k];
     return `<td>${esc(show(v))}${al ? ` <span class="al" title="${esc(al)}">⚠</span>` : ''}</td>`;
   }
@@ -584,5 +593,5 @@
       buttons: [{ t: 'Entendido', cls: 'primary' }] });
   }
 
-  App.ui = { render, go, showResults, exportDialog, saveDialog, cellHtml: (x, k) => cellHtml(x, k), ICO, isLight };
+  App.ui = { render, go, showResults, exportDialog, saveDialog, cellHtml: (x, k) => cellHtml(x, k), ICO, isLight, COLS, BASE };
 })(window.App);

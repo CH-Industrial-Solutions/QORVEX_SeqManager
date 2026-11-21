@@ -86,3 +86,29 @@ html[data-theme="light"] .t td.deliv,.tw .t td.deliv{background:#D7F5E3 !importa
 .mwrap > main .ptitle > h1{display:none}
 .sd-brand small{font-size:7.6px;letter-spacing:.1em}
 .shell.min .sd-brand img{height:34px;max-width:52px;object-fit:contain;object-position:center}
+
+/* ---------- V 13.03: devoluciones, inventario y reportes ---------- */
+.t td.devc,.tw .t td.devc{background:#EDE4FB !important;color:#6B21A8;font-weight:800;cursor:help}
+html[data-theme="light"] .t td.devc{background:#EDE4FB !important;color:#6B21A8}
+.tw2{overflow:auto;border-radius:10px}
+.inv-sum tbody tr{cursor:pointer}
+.inv-sum tbody tr.sel td,.inv-sum tbody tr.sel th{background:rgba(34,211,238,.12)}
+.inv-list{max-height:calc(100vh - 470px);min-height:260px}
+.ivt{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;font-weight:700;border:1px solid currentColor}
+.ivt.val{color:#34D399}.ivt.seq{color:#FBBF5A}.ivt.dev{color:#C084FC}
+html[data-theme="light"] .ivt.val{color:#0F7A43}html[data-theme="light"] .ivt.seq{color:#B45309}html[data-theme="light"] .ivt.dev{color:#6B21A8}
+.opt-inline{display:inline-flex;align-items:center;gap:6px;font-weight:600;cursor:pointer;margin-right:6px}
+table.ess{border-collapse:collapse;min-width:900px;font-size:14px;background:#fff;color:#111}
+table.ess th,table.ess td{border:1px solid #fff;padding:6px 10px;text-align:center;white-space:nowrap}
+table.ess thead th{font-weight:800}
+table.ess .h2 th{background:#4472C4;color:#fff}
+table.ess tbody th{background:#4472C4;color:#fff;text-align:left}
+table.ess .rate{background:#FCE4D6;color:#111}
+table.ess .e0{background:#fff}
+table.ess td{border-bottom:1px solid #E5E7EB}
+table.ess td.miss{color:#C00000;font-weight:800}
+table.ess tr.tot th{background:#fff;color:#4472C4}
+table.ess tr.tot td{font-weight:800}
+table.ess tr.ivd th{background:#fff;color:#111;font-weight:500;font-style:italic}
+table.ess td.g{background:#EDEDED;font-weight:800}
+.dpanel .essp{color:#0A1A3A;margin:0 0 6px;line-height:1.5}

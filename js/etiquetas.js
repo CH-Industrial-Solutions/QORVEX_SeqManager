@@ -1,4 +1,4 @@
-/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
+/*! QORVEX · © 2026 CH Industrial Solutions · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    QORVEX LABELS — etiquetas 6 × 4 in (Validación · Secuencia · Línea)
    Módulo compartido por QORVEX (Motor) y QORVEX MOBILE.
@@ -11,7 +11,7 @@
 (function (G) {
   'use strict';
   const DIRN = 'Etiquetas', CONS = 'Etiquetas_Consecutivos.txt', LOCK = 'Etiquetas_candado.json';
-  const OPS = ['Validación', 'Secuencia', 'Línea'], MAXQ = 500, MAXP = 999;
+  const OPS = ['Validación', 'Secuencia', 'Devolución', 'Línea'], MAXQ = 500, MAXP = 999;
   const HEAD = ['Fecha', 'Hora', 'Equipo', 'No. Empleado', 'Nombre', 'Operacion', 'Componente', 'Linea', 'ID', 'Posicion', 'Lote', 'Estado', 'Impresora', 'Registrado', 'Motivo'];
   const CHEAD = ['Operacion', 'Componente', 'Linea', 'Prefijo', 'Ultimo', 'Actualizado', 'Equipo'];
   const RE = /^Etiquetas_([A-Z0-9_-]+)_(\d{4}-\d{2})\.txt$/;
@@ -22,12 +22,12 @@
   /* ---------- Configuración (Config_QORVEX.json → labels) ---------- */
   const DEF = () => ({
     logo: true,
-    comps: [['Arnés', 'AA'], ['BCM', 'BA'], ['Cluster', 'CA'], ['Switch Gde', 'DA'], ['Switch CH', 'EA'], ['Llaves', 'FA']].map(([n, p]) => ({ n, p, a: true })),
+    comps: [['Arnés', 'AA'], ['BCM', 'BA'], ['Cluster', 'CA'], ['Switch Gde', 'DA'], ['Switch CH', 'EA'], ['Llaves', 'FA']].map(([n, p]) => ({ n, p, pd: 'R' + p[0], a: true })),
     lines: ['011', '065', '014', '044'].map((l) => ({ l, a: true })),
   });
   function norm(cfg) {
     const l = (cfg && cfg.labels) || {}, d = DEF();
-    const comps = Array.isArray(l.comps) ? l.comps.map((x) => ({ n: String(x.n || '').trim(), p: String(x.p || '').trim().toUpperCase(), a: x.a !== false })).filter((x) => x.n && validPrefix(x.p)) : d.comps;
+    const comps = Array.isArray(l.comps) ? l.comps.map((x) => { const p = String(x.p || '').trim().toUpperCase(), pd = String(x.pd || '').trim().toUpperCase(); return { n: String(x.n || '').trim(), p, pd: validPrefix(pd) ? pd : 'R' + (p[0] || 'X'), a: x.a !== false }; }).filter((x) => x.n && validPrefix(x.p)) : d.comps;
     const lines = Array.isArray(l.lines) ? l.lines.map((x) => ({ l: String(x.l || '').trim(), a: x.a !== false })).filter((x) => x.l) : d.lines;
     return { logo: l.logo !== false, comps, lines };
   }
@@ -178,18 +178,19 @@
   async function reserve(ctx, op, comp, linea, qty) {
     const C = norm(ctx.cfg()), cp = C.comps.find((c) => c.n === comp);
     if (!cp) throw new Error('Componente no configurado: ' + comp);
+    const basePre = op === 'Devolución' ? cp.pd : cp.p;
     await perm(ctx.dir());
     return withLock(ctx, async (d) => {
       const cons = await readCons(d), all = await loadAll(d);
-      const cur = counterOf(cons, regMax(all), op, comp, linea, cp.p);
+      const cur = counterOf(cons, regMax(all), op, comp, linea, basePre);
       const al = allocate(cur.p, cur.n, qty), now = new Date(), fecha = today(now), hora = nowHM(now), lote = `${ctx.dev()}-${Date.now()}`;
       // 1) registro primero: aunque falle lo demás, esos IDs ya no se reutilizan
-      await append(d, regName(ctx.dev()), HEAD, al.ids.map((id, i) => row(ctx, { fecha, hora, op, comp, linea: op === 'Validación' ? '' : linea, id, pos: `${i + 1}/${qty}`, lote, estado: 'Reservado' })));
+      await append(d, regName(ctx.dev()), HEAD, al.ids.map((id, i) => row(ctx, { fecha, hora, op, comp, linea: op === 'Secuencia' ? linea : '', id, pos: `${i + 1}/${qty}`, lote, estado: 'Reservado' })));
       // 2) consecutivo
       const k = ckey(op, comp, linea), out = cons.filter((r) => ckey(r.Operacion, r.Componente, r.Linea) !== k);
       out.push({ Operacion: op, Componente: comp, Linea: lineaKey(op, linea), Prefijo: al.prefix, Ultimo: al.last, Actualizado: new Date().toISOString(), Equipo: ctx.dev() });
       await writeWhole(d, CONS, '﻿' + [CHEAD, ...out.map((r) => CHEAD.map((h) => r[h]))].map(toLine).join('\r\n') + '\r\n');
-      return { op, comp, linea: op === 'Validación' ? '' : linea, ids: al.ids, qty, fecha, hora, lote };
+      return { op, comp, linea: op === 'Secuencia' ? linea : '', ids: al.ids, qty, fecha, hora, lote };
     });
   }
   /** Línea: sin consecutivo ni código de barras; un renglón por lote */
@@ -310,7 +311,7 @@
     const has = !!ctx.dir();
     const tabs = [['gen', 'Generar'], ['hist', 'Historial'], ['cons', 'Último ID']];
     el.innerHTML = `<div class="qxl-wrap">
-      <div class="${P}"><div class="${H}"><h2 class="qxl-h">ETIQUETAS <small>6 × 4 in · Validación · Secuencia · Línea</small></h2></div>
+      <div class="${P}"><div class="${H}"><h2 class="qxl-h">ETIQUETAS <small>6 × 4 in · Validación · Secuencia · Devolución · Línea</small></h2></div>
         <div class="qxl-row" style="margin-top:8px"><div class="qxl-sub">${tabs.map(([k, t]) => `<button class="btn sm ${V.view === k ? 'on' : ''}" data-v="${k}">${t}</button>`).join('')}</div>
         <span style="flex:1"></span><span class="qxl-muted">Equipo <b>${esc(ctx.dev())}</b> · Impresora</span>
         <input class="input" id="qxlPr" style="max-width:220px;height:32px" placeholder="Nombre en Windows" value="${esc(printer())}"><button class="btn sm" id="qxlPrS">Guardar</button></div></div>
@@ -342,15 +343,15 @@
     const $ = (s) => body.querySelector(s);
     if (!comps.length) { $('#qxlErr').textContent = 'No hay componentes activos. El Administrador los configura en QORVEX › CONFIG › Etiquetas.'; $('#qxlGen').disabled = true; }
     let cons = [], rmax = {};
-    const sync = () => { $('#qxlLinL').hidden = $('#qxlOp').value === 'Validación'; };
+    const sync = () => { const o = $('#qxlOp').value; $('#qxlLinL').hidden = o === 'Validación' || o === 'Devolución'; };
     const upd = () => {
       sync();
       const op = $('#qxlOp').value, comp = $('#qxlComp').value, lin = $('#qxlLin').value, qty = Number($('#qxlQty').value);
       const R = $('#qxlRange');
       if (!comp || !Number.isInteger(qty) || qty < 1 || qty > MAXQ) { R.textContent = `Cantidad inválida (1 a ${MAXQ}).`; return; }
-      if (op !== 'Validación' && !lin) { R.textContent = 'No hay líneas activas.'; return; }
+      if ((op === 'Secuencia' || op === 'Línea') && !lin) { R.textContent = 'No hay líneas activas.'; return; }
       if (op === 'Línea') { R.textContent = `Se imprimirán ${qty} copia(s) de L-${lin} para ${comp}. Sin consecutivo ni código de barras.`; return; }
-      const cp = C.comps.find((c) => c.n === comp), cur = counterOf(cons, rmax, op, comp, lin, cp.p), al = allocate(cur.p, cur.n, qty);
+      const cp = C.comps.find((c) => c.n === comp), cur = counterOf(cons, rmax, op, comp, lin, op === 'Devolución' ? cp.pd : cp.p), al = allocate(cur.p, cur.n, qty);
       R.textContent = `Se generará de ${al.ids[0]} a ${al.ids[al.ids.length - 1]} (${qty} etiquetas)${op === 'Secuencia' ? ' · línea ' + lin : ''}${al.prefix !== cur.p ? ' · incluye cambio de prefijo a ' + al.prefix : ''}. El rango final se confirma al reservar.`;
     };
     ['#qxlOp', '#qxlComp', '#qxlLin'].forEach((s) => ($(s).onchange = upd)); $('#qxlQty').oninput = upd;
@@ -368,7 +369,7 @@
       const err = (m) => ($('#qxlErr').textContent = m); err('');
       if (V.batch) return err('Primero imprime o cancela el lote en vista previa.');
       const op = $('#qxlOp').value, comp = $('#qxlComp').value, lin = $('#qxlLin').value, qty = Number($('#qxlQty').value);
-      if (!comp || (op !== 'Validación' && !lin)) return err('Selecciona operación, componente y línea.');
+      if (!comp || ((op === 'Secuencia' || op === 'Línea') && !lin)) return err('Selecciona operación, componente y línea.');
       if (!Number.isInteger(qty) || qty < 1 || qty > MAXQ) return err(`La cantidad debe ser entera entre 1 y ${MAXQ}.`);
       if (!(await ctx.confirm('Confirmar etiquetas', `<p>¿Confirmas <b>${qty}</b> ${op === 'Línea' ? `copia(s) de <b>L-${esc(lin)}</b>` : 'etiqueta(s)'} de <b>${esc(comp)}</b>${op === 'Secuencia' ? ` para la línea <b>${esc(lin)}</b>` : ''}?</p>`, 'Generar'))) return;
       V.busy = true; $('#qxlGen').disabled = true; $('#qxlGen').textContent = 'Reservando…';
@@ -443,14 +444,14 @@
   async function vCons(body, ctx, C) {
     const P = ctx.ui.panel;
     body.innerHTML = `<div class="${P}"><h2 class="qxl-h" style="margin-bottom:10px">Último ID por componente</h2><div class="qxl-tw"><table class="qxl-tbl"><thead><tr><th>Operación</th><th>Componente</th><th>Línea</th><th>Prefijo</th><th>Último ID</th><th>Próximo ID</th></tr></thead><tbody id="qxlCt"><tr><td colspan="6" class="qxl-muted">Cargando…</td></tr></tbody></table></div>
-      <p class="qxl-muted">Validación lleva un consecutivo por componente; Secuencia, uno por componente y línea. Al llegar a 999 se pasa al siguiente prefijo (AA → AB).</p></div>`;
+      <p class="qxl-muted">Validación y Devolución llevan un consecutivo por componente (Devolución con su propio prefijo); Secuencia, uno por componente y línea. Al llegar a 999 se pasa al siguiente prefijo (AA → AB).</p></div>`;
     let cons = [], rmax = {};
     try { const d = await sub(ctx.dir()); cons = await readCons(d); rmax = regMax(await loadAll(d)); } catch (e) {}
     const tr = (op, comp, lin, base) => { const cur = counterOf(cons, rmax, op, comp, lin, base); return `<tr><td>${op}</td><td>${esc(comp)}</td><td>${esc(lin || '—')}</td><td>${esc(cur.p)}</td><td><b>${cur.n ? formatId(cur.p, cur.n) : '—'}</b></td><td>${allocate(cur.p, cur.n, 1).ids[0]}</td></tr>`; };
     const seqKeys = new Set(); cons.filter((r) => r.Operacion === 'Secuencia').forEach((r) => seqKeys.add(`${r.Componente}|${r.Linea}`));
     Object.keys(rmax).filter((k) => k.startsWith('Secuencia|')).forEach((k) => { const [, c, l] = k.split('|'); seqKeys.add(`${c}|${l}`); });
     const base = (n) => (C.comps.find((c) => c.n === n) || {}).p || 'AA';
-    body.querySelector('#qxlCt').innerHTML = C.comps.map((c) => tr('Validación', c.n, '', c.p)).join('') + [...seqKeys].sort().map((k) => { const [c, l] = k.split('|'); return tr('Secuencia', c, l, base(c)); }).join('');
+    body.querySelector('#qxlCt').innerHTML = C.comps.map((c) => tr('Validación', c.n, '', c.p)).join('') + C.comps.map((c) => tr('Devolución', c.n, '', c.pd)).join('') + [...seqKeys].sort().map((k) => { const [c, l] = k.split('|'); return tr('Secuencia', c, l, base(c)); }).join('');
   }
 
   G.QXLabels = { render, norm, DEF, reserve, reserveLinea, mark, fold, loadAll, regMax, counterOf, allocate, nextPrefix, formatId, code128, barcodeSVG, labelHTML, parseId, ord, _T: T, _V: V, DIRN, CONS };

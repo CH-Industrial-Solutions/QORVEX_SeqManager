@@ -26,6 +26,14 @@
   });
   let CFG = DEF(), META = { loaded: false, lastModified: 0 };
 
+  /** External Sequence Status: rate diario, CIAs del reporte y horario de generación */
+  const DEF_CIAS = [['L1', '011'], ['L2', '065'], ['SATX', '044'], ['TULSA', '014'], ['SAP', '002'], ['TSC', '498']];
+  function normReport(r) {
+    r = r || {};
+    const cias = Array.isArray(r.cias) && r.cias.length ? r.cias.map((c) => ({ n: String(c.n || '').trim(), c: String(c.c || '').trim() })).filter((c) => c.n || c.c) : DEF_CIAS.map(([n, c]) => ({ n, c }));
+    const times = (Array.isArray(r.times) ? r.times : ['07:00']).map((t) => String(t).trim()).filter((t) => /^\d{1,2}:\d{2}$/.test(t)).map((t) => t.padStart(5, '0'));
+    return { rate: Math.max(1, Number(r.rate) || 279), cias, on: r.on !== false, days: Array.isArray(r.days) ? r.days.map(Number).filter((d) => d >= 0 && d <= 6) : [1, 2, 3, 4, 5], times: [...new Set(times)].sort(), cover: r.cover === 'days' ? 'days' : 'all', coverDays: Math.max(1, Math.min(30, Number(r.coverDays) || 3)) };
+  }
   function normalize(c) {
     const d = DEF(), o = Object.assign(d, c || {});
     o.shifts = (Array.isArray(o.shifts) && o.shifts.length ? o.shifts : d.shifts).map((x) => ({
@@ -39,6 +47,7 @@
     o.motor = { idleMin: Math.max(5, +(o.motor && o.motor.idleMin) || 30) };
     o.brand = { wall: (o.brand && +o.brand.wall === 2) ? 2 : 1, logos: ((o.brand && o.brand.logos) || []).filter((x) => /^data:image\//.test(x)).slice(0, 3) };
     o.labels = window.QXLabels ? window.QXLabels.norm(o) : (o.labels || {}); // etiquetas 6×4: componentes, prefijos, líneas, logo
+    o.report = normReport(o.report); // External Sequence Status: rate, CIAs y programación
     return o;
   }
 
@@ -129,7 +138,7 @@
     const dis = ro ? 'disabled' : '';
     const cov = (() => { const cnt = new Array(1440).fill(0); D.shifts.forEach((x) => { for (let k = 0; k < 1440; k++) if (inShift(x, k)) cnt[k]++; }); return { gaps: cnt.filter((c) => !c).length, over: cnt.filter((c) => c > 1).length }; })();
     m.innerHTML = `
-      <div class="ptitle"><h1>CONFIGURACIÓN <small>Turnos, metas, supervisores, usuarios y etiquetas</small></h1>
+      <div class="ptitle"><h1>CONFIGURACIÓN <small>Turnos, metas, supervisores, usuarios, etiquetas y reportes</small></h1>
         <span class="muted">${META.loaded ? `${esc(NAME)} · ${CFG.updated ? `guardado ${App.fDT(new Date(CFG.updated).getTime())}${CFG.by ? ` por ${esc(CFG.by)}` : ''}` : ''}` : 'Aún no existe Config_QORVEX.json: se crea al guardar'}</span>
         <span class="sp"></span><span id="cfDirty"></span>${ro ? '<span class="pill warn">Modo consulta: solo lectura</span>' : '<button class="btn" id="cfReset">Descartar cambios</button><button class="btn primary" id="cfSave">Guardar configuración</button>'}</div>
       <div class="note">QORVEX MOBILE toma de aquí los turnos, los usuarios y los supervisores cada vez que se conecta a la carpeta.</div>
@@ -184,9 +193,9 @@
       <div class="dpanel cfg"><div class="dph"><h3>Etiquetas 6 × 4</h3><span class="muted small">Componentes, prefijos y líneas · QORVEX y QORVEX MOBILE</span><span class="sp"></span>
           <label class="lbchk"><input type="checkbox" id="lbLogo" ${D.labels.logo ? 'checked' : ''} ${dis}> Logo QORVEX en la etiqueta</label></div>
         <div class="dgrid cfg2">
-          <div><table class="t mini"><thead><tr><th>Componente</th><th>Prefijo</th><th>Activo</th><th></th></tr></thead><tbody>
-            ${D.labels.comps.map((c, i) => `<tr><td><input class="input" data-lc="${i}" data-k="n" value="${esc(c.n)}" maxlength="40" ${dis}></td><td><input class="input" data-lc="${i}" data-k="p" value="${esc(c.p)}" maxlength="4" style="text-transform:uppercase;width:80px" ${dis}></td>
-              <td><input type="checkbox" data-lc="${i}" data-k="a" ${c.a ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-lcdel="${i}">✕</button>`}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sin componentes.</td></tr>'}
+          <div><table class="t mini"><thead><tr><th>Componente</th><th>Prefijo</th><th title="Prefijo de las etiquetas de Devolución">Devolución</th><th>Activo</th><th></th></tr></thead><tbody>
+            ${D.labels.comps.map((c, i) => `<tr><td><input class="input" data-lc="${i}" data-k="n" value="${esc(c.n)}" maxlength="40" ${dis}></td><td><input class="input" data-lc="${i}" data-k="p" value="${esc(c.p)}" maxlength="4" style="text-transform:uppercase;width:80px" ${dis}></td><td><input class="input" data-lc="${i}" data-k="pd" value="${esc(c.pd || '')}" maxlength="4" style="text-transform:uppercase;width:80px" ${dis}></td>
+              <td><input type="checkbox" data-lc="${i}" data-k="a" ${c.a ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-lcdel="${i}">✕</button>`}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Sin componentes.</td></tr>'}
           </tbody></table>${ro ? '' : '<button class="btn sm" id="lcAdd">+ Componente</button>'}</div>
           <div><table class="t mini"><thead><tr><th>Línea</th><th>Activa</th><th></th></tr></thead><tbody>
             ${D.labels.lines.map((l, i) => `<tr><td><input class="input" data-ll="${i}" data-k="l" value="${esc(l.l)}" maxlength="10" ${dis}></td><td><input type="checkbox" data-ll="${i}" data-k="a" ${l.a ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-lldel="${i}">✕</button>`}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sin líneas.</td></tr>'}
@@ -194,7 +203,25 @@
         </div>
         <div class="muted small">El prefijo (1 a 4 letras) es el inicio del ID: AA001, AA002… Al llegar a 999 pasa solo al siguiente (AB). Si cambias un prefijo, los consecutivos que ya existen siguen con el suyo. Desactivar oculta el componente o la línea al generar, sin borrar el historial.</div></div>
 
-      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.02.00</span></div>
+      <div class="dpanel cfg"><div class="dph"><h3>External Sequence Status</h3><span class="muted small">Reporte de gerencia: rate, CIAs y horario</span></div>
+        <div class="dgrid cfg2">
+          <div>
+            <div class="frow"><label class="lbl">Rate (unidades por día)</label><input class="input" id="rpRate" type="number" min="1" value="${D.report.rate}" style="width:120px" ${dis}></div>
+            <table class="t mini" style="margin-top:10px"><thead><tr><th>Nombre</th><th>Cia</th><th></th></tr></thead><tbody>
+              ${D.report.cias.map((c, i) => `<tr><td><input class="input" data-rc="${i}" data-k="n" value="${esc(c.n)}" maxlength="20" ${dis}></td><td><input class="input" data-rc="${i}" data-k="c" value="${esc(c.c)}" maxlength="6" style="width:90px" ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-rcdel="${i}">✕</button>`}</td></tr>`).join('')}
+            </tbody></table>${ro ? '' : '<button class="btn sm" id="rcAdd">+ Cia</button>'}
+          </div>
+          <div>
+            <label class="lbchk"><input type="checkbox" id="rpOn" ${D.report.on ? 'checked' : ''} ${dis}> Generar automáticamente en Data Base\\Reportes</label>
+            <div class="frow" style="margin-top:10px"><label class="lbl">Días</label><div class="days">${['D','L','M','M','J','V','S'].map((d, i) => `<label class="day"><input type="checkbox" data-rd="${i}" ${D.report.days.includes(i) ? 'checked' : ''} ${dis}><span>${d}</span></label>`).join('')}</div></div>
+            <div class="frow" style="margin-top:10px"><label class="lbl">Horas (separadas por coma)</label><input class="input" id="rpTimes" value="${esc(D.report.times.join(', '))}" placeholder="07:00, 15:00" style="width:220px" ${dis}></div>
+            <div class="frow" style="margin-top:10px"><label class="lbl">Cobertura</label><select class="input" id="rpCover" style="width:auto" ${dis}><option value="all" ${D.report.cover === 'all' ? 'selected' : ''}>Todo (como está la operación)</option><option value="days" ${D.report.cover === 'days' ? 'selected' : ''}>Desde hoy, próximos N días de Start Date</option></select>
+              <input class="input" id="rpDays" type="number" min="1" max="30" value="${D.report.coverDays}" style="width:80px" ${D.report.cover === 'days' ? '' : 'hidden'} ${dis}></div>
+            <div class="muted small" style="margin-top:8px">Se genera solo mientras QORVEX esté abierto en alguna PC. Si estaba cerrado a la hora programada, se genera al abrirlo ese mismo día.</div>
+          </div>
+        </div></div>
+
+      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.04.00</span></div>
         <div class="about"><img src="img/favicon-ch-180.png" alt="CH Industrial Solutions"><div><b>Desarrollado por CH Industrial Solutions</b><br>Titular: Ing. Carlos Alberto Hernández Hernández<br>charliealberth290116@outlook.es · 8115377033 · General Escobedo, Nuevo León, México</div></div></div>
 
       <div class="dpanel cfg"><div class="dph"><h3>Motor</h3></div>
@@ -230,12 +257,21 @@
       toast('Contraseña asignada · se aplica al guardar la configuración', 'ok'); redraw();
     }));
     $('#lbLogo').onchange = (e) => { D.labels.logo = e.target.checked; };
-    $$('[data-lc][data-k]', m).forEach((i) => (i.onchange = () => { const o = D.labels.comps[+i.dataset.lc], k = i.dataset.k; o[k] = k === 'a' ? i.checked : k === 'p' ? i.value.trim().toUpperCase() : i.value; }));
+    $$('[data-lc][data-k]', m).forEach((i) => (i.onchange = () => { const o = D.labels.comps[+i.dataset.lc], k = i.dataset.k; o[k] = k === 'a' ? i.checked : k === 'p' || k === 'pd' ? i.value.trim().toUpperCase() : i.value; }));
     $$('[data-ll][data-k]', m).forEach((i) => (i.onchange = () => { const o = D.labels.lines[+i.dataset.ll]; o[i.dataset.k] = i.dataset.k === 'a' ? i.checked : i.value.trim(); }));
     $$('[data-lcdel]', m).forEach((b) => (b.onclick = () => { D.labels.comps.splice(+b.dataset.lcdel, 1); redraw(); }));
     $$('[data-lldel]', m).forEach((b) => (b.onclick = () => { D.labels.lines.splice(+b.dataset.lldel, 1); redraw(); }));
-    $('#lcAdd').onclick = () => { D.labels.comps.push({ n: '', p: '', a: true }); redraw(); };
+    $('#lcAdd').onclick = () => { D.labels.comps.push({ n: '', p: '', pd: '', a: true }); redraw(); };
     $('#llAdd').onclick = () => { D.labels.lines.push({ l: '', a: true }); redraw(); };
+    $('#rpRate').onchange = (e) => { D.report.rate = Math.max(1, Number(e.target.value) || 279); };
+    $$('[data-rc][data-k]', m).forEach((i) => (i.onchange = () => { D.report.cias[+i.dataset.rc][i.dataset.k] = i.value.trim(); }));
+    $$('[data-rcdel]', m).forEach((b) => (b.onclick = () => { D.report.cias.splice(+b.dataset.rcdel, 1); redraw(); }));
+    if ($('#rcAdd')) $('#rcAdd').onclick = () => { D.report.cias.push({ n: '', c: '' }); redraw(); };
+    $('#rpOn').onchange = (e) => { D.report.on = e.target.checked; };
+    $$('[data-rd]', m).forEach((i) => (i.onchange = () => { const d = +i.dataset.rd; D.report.days = i.checked ? [...new Set([...D.report.days, d])].sort() : D.report.days.filter((x) => x !== d); }));
+    $('#rpTimes').onchange = (e) => { D.report.times = normReport({ times: e.target.value.split(/[,;\s]+/) }).times; e.target.value = D.report.times.join(', '); };
+    $('#rpCover').onchange = (e) => { D.report.cover = e.target.value; $('#rpDays').hidden = e.target.value !== 'days'; };
+    $('#rpDays').onchange = (e) => { D.report.coverDays = Math.max(1, Math.min(30, Number(e.target.value) || 3)); };
     $('#idle').onchange = (e) => { D.motor.idleMin = Math.max(5, parseInt(e.target.value, 10) || 30); };
     $('#cfReset').onclick = () => { D = null; redraw(); };
     $('#cfSave').onclick = async () => {
@@ -251,7 +287,10 @@
       if (dupe(D.users.map((u) => u.emp))) err.push('Hay usuarios con el mismo No. de empleado.');
       if (D.holidays.some((h) => !/^\d{4}-\d{2}-\d{2}$/.test(h.d))) err.push('Cada festivo necesita fecha.');
       if (D.labels.comps.some((c) => !String(c.n).trim() || !/^[A-Z]{1,4}$/.test(c.p))) err.push('Etiquetas: cada componente necesita nombre y un prefijo de 1 a 4 letras.');
-      if (dupe(D.labels.comps.map((c) => String(c.n).trim().toLowerCase())) || dupe(D.labels.comps.map((c) => c.p))) err.push('Etiquetas: hay componentes o prefijos repetidos.');
+      if (D.labels.comps.some((c) => !/^[A-Z]{1,4}$/.test(c.pd || ''))) err.push('Etiquetas: cada componente necesita prefijo de Devolución (1 a 4 letras).');
+      if (dupe(D.labels.comps.map((c) => String(c.n).trim().toLowerCase())) || dupe(D.labels.comps.flatMap((c) => [c.p, c.pd]))) err.push('Etiquetas: hay componentes o prefijos repetidos (incluye los de Devolución).');
+      if (!(D.report.rate > 0)) err.push('External Sequence Status: el rate debe ser mayor a 0.');
+      if (D.report.on && D.report.times.length && !D.report.days.length) err.push('External Sequence Status: elige al menos un día de ejecución.');
       if (D.labels.lines.some((l) => !String(l.l).trim())) err.push('Etiquetas: cada línea necesita identificador.');
       if (dupe(D.labels.lines.map((l) => String(l.l).trim()))) err.push('Etiquetas: hay líneas repetidas.');
       if (err.length) return App.modal({ title: 'Revisa la configuración', body: `<ul class="errs">${err.map((e) => `<li>${esc(e)}</li>`).join('')}</ul>` });
@@ -261,5 +300,5 @@
   }
   const discard = () => { D = null; };
 
-  App.cfg = { NAME, DAYS, ROLE_N, addPending, load, save, render, discard, shiftAt, opDate, hours, hasGoal, holiday, isoDay, hm, inShift, hashPw, get: () => CFG, get loaded() { return META.loaded; } };
+  App.cfg = { normReport, NAME, DAYS, ROLE_N, addPending, load, save, render, discard, shiftAt, opDate, hours, hasGoal, holiday, isoDay, hm, inShift, hashPw, get: () => CFG, get loaded() { return META.loaded; } };
 })(window.App);
