@@ -113,7 +113,7 @@
           ${mode ? `<button class="sd-btn sd-mode ${canEd ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${canEd ? ICO.pen : ICO.eye}<span class="tx">${canEd ? 'Editor' : 'Consulta'}</span></button>` : ''}
           <button class="sd-btn" id="bTheme" title="Cambiar a tema ${isLight() ? 'oscuro' : 'claro'}">${isLight() ? ICO.sun : ICO.moon}<span class="tx">Tema ${isLight() ? 'claro' : 'oscuro'}</span></button>
           ${mode ? `<button class="sd-btn" id="bOut" title="Cerrar sesión y liberar el modo Editor">${ICO.out}<span class="tx">Cerrar sesión</span></button>` : ''}
-          <div class="sd-ver">V 13.05.00</div>
+          <div class="sd-ver">V 13.05.01</div>
         </div>
       </aside>
       <div class="mwrap">
@@ -183,9 +183,9 @@
           return `<div class="fcard ${L ? 'ok' : ''}">
           <div class="fh"><b>${r.t}</b><span class="tag w">TXT de las tabletas</span></div>
           <div class="fi muted small">Lee todos los <b>${App.cap.PRE[r.k]}_EQUIPO_aaaa-mm.txt</b> de la carpeta. Cada tableta escribe solo los suyos; el Motor solo agrega en los de MOTOR.</div>
-          ${L ? `<table class="t mini"><thead><tr><th>Equipo</th><th>Archivos</th><th>Registros</th><th>Modificado</th></tr></thead><tbody>
-            ${devs.filter((x) => x.dev !== App.cap.MOTOR || x.files.length || x.t.rows.length).map((x) => `<tr><td><b>${esc(x.dev)}</b></td><td class="small">${x.files.map((n) => { const f = fl.find((y) => y.name === n); return `${esc(n)}${f ? ` <span class="muted">(${fmtN(f.n)} líneas)</span>` : ''}`; }).join('<br>') || '<span class="muted">—</span>'}</td><td class="num">${fmtN(x.t.rows.length)}${x.dirty ? ' <span class="pill warn">+ sin guardar</span>' : ''}</td><td class="small">${x.files.length ? App.fDT(x.lastModified) : '—'}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Aún no hay capturas en TXT.</td></tr>'}
-          </tbody></table>` : '<div class="fi muted">Se leen al presionar <b>Cargar archivos</b>.</div>'}
+          ${L ? `<div class="ftw"><table class="t mini ftab"><thead><tr><th>Equipo</th><th>Archivo</th><th>Registros</th></tr></thead><tbody>
+            ${devs.filter((x) => x.dev !== App.cap.MOTOR || x.files.length || x.t.rows.length).map((x) => `<tr><td><b>${esc(x.dev)}</b></td><td class="small">${x.files.map((n) => { const f = fl.find((y) => y.name === n); return `${esc(n)}${f ? ` <span class="muted">${fmtN(f.n)} líneas</span>` : ''}`; }).join('<br>') || '<span class="muted">—</span>'}${x.files.length ? `<span class="muted">Modificado ${App.fDT(x.lastModified)}</span>` : ''}</td><td class="num">${fmtN(x.t.rows.length)}${x.dirty ? ' <span class="pill warn">+ sin guardar</span>' : ''}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Aún no hay capturas en TXT.</td></tr>'}
+          </tbody></table></div>` : '<div class="fi muted">Se leen al presionar <b>Cargar archivos</b>.</div>'}
           <div class="frow">${(S.dirty || {})[r.k] ? '<span class="pill warn">Cambios sin guardar</span>' : ''}<span class="sp"></span><button class="btn sm" data-reload="${r.k}">↻ ${L ? 'Actualizar' : 'Cargar'}</button></div>
         </div>`;
         }
