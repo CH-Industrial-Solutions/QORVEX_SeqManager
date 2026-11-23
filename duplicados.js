@@ -2,7 +2,7 @@
 /* =====================================================================
    duplicados.js — "Agregar duplicado" (solo QORVEX, modo Editor)
    En QORVEX MOBILE un job no se puede repetir (salvo Switch Ch / Gde hasta
-   4 veces). Si un job SÍ llega repetido de verdad, el de QORVEX lo agrega
+   5 veces). Si un job SÍ llega repetido de verdad, el de QORVEX lo agrega
    aquí con un motivo obligatorio. Se escribe al final de
    Validacion_MOTOR_aaaa-mm.txt / Secuencia_MOTOR_… con Duplicado = Sí.
    ===================================================================== */
@@ -21,7 +21,7 @@
     const S = App.S;
     if (!App.lock.need()) return;
     if (!S.L.val || !S.L.seq) return toast('Primero carga los archivos (ARCHIVOS → Cargar archivos)', 'warn');
-    const sups = App.cfg.get().supervisors.filter((s) => s.active);
+    const sups = App.cfg.sups();
     const r = await App.modal({ title: 'Agregar duplicado', wide: true, body: `
       <p class="muted">Para un job que llegó repetido y es correcto. QORVEX MOBILE no lo permite; aquí queda registrado como <b>Duplicado</b> con su motivo.</p>
       <div class="pr-grid">

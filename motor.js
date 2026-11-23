@@ -1,4 +1,4 @@
-/*! QORVEX · © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
+/*! QORVEX · © 2026 CH Industrial Solutions · Todos los derechos reservados. Software propietario: prohibida su copia, modificación o distribución sin autorización por escrito. Ver LEGAL.md y LICENSE.txt. */
 /* =====================================================================
    motor.js — reglas del cruce para llenar la hoja Planes
    Todo se calcula en memoria; nada se escribe hasta que el usuario guarda.
@@ -97,8 +97,15 @@
    * Ejecuta el cruce. Devuelve una fila de resultado por cada fila de Planes:
    * { r, base:{aor,job,ls,cia}, out:{k:valor}, alert:{k:texto}, onHand, missAor }
    */
-  function run({ planes, val, seq, pulls }) {
+  function run({ planes, val, seq, pulls, dev }) {
     const iv = indexCaptura(val), is = indexCaptura(seq), ip = indexPulls(pulls);
+    // Devoluciones: la más reciente de cada job|componente
+    const idv = new Map();
+    (dev || []).forEach((d) => { const k = `${d.job}|${d.compN}`, e = idv.get(k); if (!e || (d.ts || 0) >= (e.ts || 0)) idv.set(k, d); });
+    const DCOL = (App.dev && App.dev.COL) || {};
+    // Entregas por job: la más reciente de cada job|componente
+    const ien = new Map();
+    ((App.dev && App.dev.ents) || []).forEach((d) => { const k = `${d.job}|${d.compN}`, e = ien.get(k); if (!e || (d.ts || 0) >= (e.ts || 0)) ien.set(k, d); });
     const rows = planes.rows.map((row) => {
       const g = (k) => App.xl.val(planes, row, k);
       const job = normKey(g('job'));
@@ -121,9 +128,19 @@
       const p = job ? ip.get(job) : null;
       out.pull = p ? p[0] : '';
       if (p && p.length > 1) alert.pull = `Pull capturado en ${p.length} contenedores: ${p.join(', ')}`;
+      // Devolución de línea: su caja nueva sustituye a la de secuencia (Arnés: a la de validación)
+      const devm = {};
+      Object.entries(DCOL).forEach(([cn, k]) => { const d = idv.get(`${job}|${cn}`); if (d) { out[k] = d.cont; devm[k] = d; delete alert[k]; } });
+      // Entrega por job: todas las celdas de ese componente quedan ENTREGADO (salvo que haya regresado después en una devolución)
+      const entj = {};
+      Object.keys(DCOL).forEach((cn) => {
+        const e = ien.get(`${job}|${cn}`); if (!e) return;
+        const d = idv.get(`${job}|${cn}`); if (d && (d.ts || 0) > (e.ts || 0)) return;
+        CALC.filter((c) => c.comp === cn && c.src !== 'count').forEach((c) => { entj[c.k] = e; });
+      });
       const onHand = ON_HAND.filter((k) => out[k] !== SHORT).length;
       out.estado = `${onHand}/6`;
-      return { r: row.r, base: { aor: g('aor'), job: g('job'), ls: g('ls'), cia: g('cia') }, jobKey: job, out, alert, onHand, noJob: !job };
+      return { r: row.r, base: { aor: g('aor'), job: g('job'), ls: g('ls'), cia: g('cia') }, jobKey: job, out, alert, onHand, noJob: !job, dev: devm, entj };
     });
     return { rows, idx: { val: iv, seq: is }, stats: { badVal: iv.bad, badSeq: is.bad, ran: Date.now() } };
   }

@@ -6,7 +6,7 @@
    - Todos los jobs del rango; sin inventario (ID en SHORTAGE) se marca
      "SIN INVENTARIO".
    - Opcional: incluir jobs ya secuenciados con su contenedor original.
-   - Switch Gde: una fila por pieza (QY, máximo 4): 202625 1, 202625 2…
+   - Switch Gde: una fila por pieza (QY, máximo 5): 202625 1, 202625 2…
    - 30 filas por hoja; la última hoja lleva el remanente.
    ===================================================================== */
 (function (App) {
@@ -46,7 +46,7 @@
       const sin = id === SH() || id == null || id === '';
       if (sin) nSin++; else if (isCont(sec)) nSeq++; else nPend++;
       let pcs = 1;
-      if (comp.qy) { const q = Number(x.out.qy); pcs = Number.isFinite(q) && q >= 1 ? Math.min(4, Math.floor(q)) : 1; }
+      if (comp.qy) { const q = Number(x.out.qy); pcs = Number.isFinite(q) && q >= 1 ? Math.min(5, Math.floor(q)) : 1; }
       for (let i = 1; i <= pcs; i++) rows.push({ x, pc: comp.qy ? i : 0, sin, id, sec });
     });
     return { comp, jobs, rows, nPend, nSeq, nSin };

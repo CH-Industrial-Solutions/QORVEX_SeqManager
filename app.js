@@ -26,7 +26,7 @@
   /** Validación o Secuencia: archivo principal + bases de las tabletas */
   const srcs = (role) => [S.L[role], ...((S.X && S.X[role]) || [])].filter(Boolean);
   const srcT = (role) => srcs(role).map((L) => L.t);
-  const runCruce = () => App.motor.run({ planes: S.L.planes.t, val: srcT('val'), seq: srcT('seq'), pulls: S.pulls });
+  const runCruce = () => App.motor.run({ planes: S.L.planes.t, val: srcT('val'), seq: srcT('seq'), pulls: S.pulls, dev: (App.dev && App.dev.recs) || [] });
   App.S = S; App.ROLES = ROLES;
 
   /* ---------- Carpeta ---------- */
@@ -64,6 +64,7 @@
       });
       await App.cfg.load();
       await App.auth.ensure();
+      if (App.cfg.seal === 'mal') toast(App.auth.TAMPER, 'warn', 12000);
       await App.lock.enter();
       // carpeta nueva: se crea Config_QORVEX.json de cero (turnos por defecto, sin supervisores ni usuarios)
       if (!App.cfg.loaded && App.lock.canEdit()) { try { await App.cfg.save(App.cfg.get()); toast('Carpeta nueva: se creó Config_QORVEX.json. Da de alta supervisores, usuarios y metas en CONFIG.', 'ok', 7000); } catch (e) { toast(`No se pudo crear Config_QORVEX.json: ${e.message}`, 'warn', 6000); } }
@@ -157,10 +158,13 @@
     await App.busy('Leyendo archivos…', async () => {
       await refreshList(); await App.cfg.load();
       for (const r of ROLES) { if (r.manual) continue; try { await loadRole(r.k); } catch (e) { errs.push(e.message); delete S.L[r.k]; } }
+      try { await App.dev.load(); } catch (e) { errs.push(`Devoluciones: ${e.message}`); }
+      try { await App.ent.load(true); } catch (e) { /* Entregas es opcional */ }
     });
     if (errs.length) await App.modal({ title: 'Algunos archivos no se cargaron', body: `<ul class="errs">${errs.map((e) => `<li>${App.esc(e)}</li>`).join('')}</ul>` });
     else toast('Archivos cargados', 'ok');
     App.ui.render();
+    if (App.secv) App.secv.run(true).then(() => { if (App.ui && (App.ui.tab ? App.ui.tab() === 'files' : false)) App.ui.render(); });
     if (!S.L.planes) await planesDialog();
     else if (ready()) { execute(true); App.ui.render(); }
   }

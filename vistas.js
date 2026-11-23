@@ -14,6 +14,8 @@
     ['pulls', 'PULLS', 'Lista de pulls'],
     ['prod', 'PRODUCTIVIDAD', 'Turnos y personas'],
     ['lbl', 'ETIQUETAS', 'Impresión 6 × 4'],
+    ['inv', 'INVENTARIO', 'Confirmación física'],
+    ['rep', 'REPORTES', 'External Sequence Status'],
   ];
   const SEC = [    // secundarios (botones en la barra superior)
     ['val', 'VALIDATE', 'Excel de Validación completo'],
@@ -41,7 +43,18 @@
     play: sv('<path d="M7 4.5v15l12.5-7.5z"/>', 1),
     bulb: sv('<path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.8.6 1.3 1.5 1.3 2.5V18h5v-1.2c0-1 .5-1.9 1.3-2.5A6.5 6.5 0 0 0 12 2.5z"/><rect x="9.5" y="19.3" width="5" height="2.2" rx="1"/>', 1),
   };
+  ICO.inv = sv('<path d="M4 7.5L12 3l8 4.5v9L12 21l-8-4.5z"/><path d="M4 7.5l8 4.5 8-4.5M12 12v9"/><path d="M8 5.3l8 4.5"/>');
+  ICO.rep = sv('<path d="M6 3h9l4 4v14H6z"/><path d="M14.5 3v4.5H19"/><path d="M9 17v-3M12 17v-6M15 17v-4"/>');
   ICO.lbl = sv('<path d="M3.5 4.5h9.2l7.8 7.8-8.2 8.2-7.8-7.8V4.5z"/><circle cx="8" cy="9" r="1.8" fill="#fff" stroke="none"/>', 1);
+  ICO.menu = sv('<path d="M4 6h16M4 12h16M4 18h16"/>');
+  ICO.files = sv('<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4.2l2 2.2h8.8A1.5 1.5 0 0 1 21 8.7v9.8a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/>');
+  ICO.config = sv('<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>');
+  ICO.mobile = sv('<rect x="6" y="2.5" width="12" height="19" rx="2.2"/><path d="M10.5 18.5h3"/>');
+  ICO.moon = sv('<path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/>');
+  ICO.sun = sv('<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5.3 5.3l1.6 1.6M17.1 17.1l1.6 1.6M5.3 18.7l1.6-1.6M17.1 6.9l1.6-1.6"/>');
+  ICO.out = sv('<path d="M14 4h4.5A1.5 1.5 0 0 1 20 5.5v13a1.5 1.5 0 0 1-1.5 1.5H14"/><path d="M10 8l-4 4 4 4M6 12h10"/>');
+  ICO.pen = sv('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>');
+  ICO.eye = sv('<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle cx="12" cy="12" r="3"/>');
   ICO.val = ICO.check; ICO.seq = ICO.flow; ICO.cube = ICO.pulls; ICO.prod = ICO.trend;
   const isLight = () => document.documentElement.dataset.theme === 'light';
   function setTheme(th) { document.documentElement.dataset.theme = th; try { localStorage.setItem('qorvex_theme', th); } catch (e) {} }
@@ -56,12 +69,14 @@
     ['idKey', 'ID-Key'], ['secKey', 'Sec-Key'], ['status', 'Status'], ['start', 'Start Date'], ['pull', 'Pull'], ['estado', 'Estado'],
   ];
   const BASE = ['aor', 'job', 'ls', 'cia'];
+  const DELIV = new Set(COLS.map(([k]) => k).filter((k) => /^(id|sec)[A-Z]/.test(k))); // celdas que se buscan en Entregas.xlsx
 
   /* Contexto para el módulo compartido de etiquetas (js/etiquetas.js) */
   const LBLCTX = {
     dir: () => App.S.dir, dev: () => 'MOTOR', user: () => App.auth.user(), isAdmin: () => App.auth.isAdmin(), cfg: () => App.cfg.get(),
     toast: (m, t, ms) => App.toast(m, t, ms), confirm: (t, h, ok) => App.confirmBox(t, h, ok || 'Aceptar', 'primary'), ui: { panel: 'dpanel', head: 'dph' },
   };
+  const SIDE = { min: (() => { try { return localStorage.getItem('qx_side_min') === '1'; } catch (e) { return false; } })() };
   function go(t) { TAB = t; render(); }
 
   function render() {
@@ -75,26 +90,48 @@
       return;
     }
     const dirty = S.planesDirty || S.pullsDirty || Object.values(S.dirty || {}).some(Boolean);
+    const admin = App.auth.isAdmin(), u = App.auth.user(), mode = App.lock.mode(), canEd = App.lock.canEdit();
+    const ALL = Object.fromEntries([...MODS, ...SEC].map(([k, t, d]) => [k, [t, d]]));
+    const dotOf = (k) => (k === 'pulls' && S.pullsDirty) || (k === 'planes' && S.planesDirty);
+    const item = (k) => { const [t, d] = ALL[k]; return `<button class="sd-it ${TAB === k ? 'on' : ''}" data-t="${k}" title="${t} · ${d}">${ICO[k] || ''}<span class="tx"><b>${t}</b><small>${d}</small></span>${dotOf(k) ? '<i class="dot">•</i>' : ''}</button>`; };
+    const group = (name, keys) => `<div class="sd-g">${name}</div>${keys.filter(Boolean).map(item).join('')}`;
+    const [pt, pd] = ALL[TAB] || ['', ''];
     root.innerHTML = `
-      <header class="top">
-        <div class="brand" id="bHome" style="cursor:pointer" title="Inicio"><img src="img/q-mark-${isLight() ? 'light' : 'dark'}.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div><span class="ver">V 13.01.00</span></div>
-        <span class="sp"></span>
-        <a class="btn ghost xlink" href="${App.LINKS.mobile}" target="_blank" rel="noopener" title="Abrir QORVEX MOBILE en otra pestaña">QORVEX MOBILE ↗</a>
-        <button class="tsw" id="bTheme" title="Cambiar a modo ${isLight() ? 'BLACK' : 'WHITE'}" aria-label="Cambiar tema"><span class="knob"><svg class="moon" viewBox="0 0 32 32" aria-hidden="true"><path d="M19.5 6.5a10 10 0 1 0 6 16.9A11.5 11.5 0 0 1 19.5 6.5z" fill="currentColor"/><path d="M23 7.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z" fill="currentColor"/><path d="M26.5 14.2l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5z" fill="currentColor"/></svg><svg class="sun" viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="6.2" fill="currentColor"/><g stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M16 3.5v3.2M16 25.3v3.2M3.5 16h3.2M25.3 16h3.2M7.2 7.2l2.2 2.2M22.6 22.6l2.2 2.2M7.2 24.8l2.2-2.2M22.6 9.4l2.2-2.2"/></g></svg></span></button>
-        <div class="secs">${SEC.filter(([k]) => k !== 'config' || App.auth.isAdmin()).map(([k, t, d]) => `<button class="sbtn ${TAB === k ? 'on' : ''}" data-t="${k}" title="${d}">${t}</button>`).join('')}</div>
-        ${S.dir ? `<div class="chip" title="Carpeta de trabajo">📁 ${esc(S.dir.name)}</div>` : ''}
-        ${S.dir ? `<button class="btn ghost" id="bChange" title="Cambiar carpeta de trabajo">Carpeta</button>` : ''}
-        ${App.lock.canEdit() || !App.lock.mode() ? `<button class="btn save ${dirty ? 'on' : ''}" id="bSave" ${App.S.L.planes && App.lock.canEdit() ? '' : 'disabled'}>${ICO.save}<span>Guardar${dirty ? ' •' : ''}</span></button>` : ''}
-      </header>
-      <nav class="tabs">
-        ${MODS.map(([k, t, s]) => `<button class="tab ${TAB === k ? 'on' : ''}" data-t="${k}">${ICO[k] || ''}<span class="tl"><b>${t}${k === 'pulls' && S.pullsDirty ? ' •' : ''}${k === 'planes' && S.planesDirty ? ' •' : ''}</b><small>${s}</small></span></button>`).join('')}
-        ${App.lock.mode() ? `<span class="tabs-r"><button class="chip mode ${App.lock.canEdit() ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${App.lock.canEdit() ? `EDITOR · ${esc(App.lock.who())}` : 'CONSULTA · solo lectura'}</button><button class="btn ghost sm" id="bOut" title="Salir y liberar el modo Editor">Salir</button></span>` : ''}
-      </nav>
-      <main id="main"></main>
-      <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados · V 13.01 (con ETIQUETAS) · <a href="#" id="bLegal" style="color:inherit;text-decoration:underline">Aviso legal</a>${App.auth.user() ? ` &nbsp;|&nbsp; ${esc(App.auth.user().name)} · ${esc(App.auth.roleTxt(App.auth.user().role))}` : ''}</footer>
+      <div class="shell ${SIDE.min ? 'min' : ''}">
+      <aside class="side">
+        <div class="sd-top"><button class="sd-tg" id="bSide" title="${SIDE.min ? 'Mostrar menú con nombres' : 'Mostrar solo íconos'}" aria-label="Mostrar u ocultar nombres del menú">${ICO.menu}</button></div>
+        <div class="sd-brand" id="bHome" title="Inicio"><img src="img/q-mark-dark.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div></div>
+        <nav class="sd-nav">
+          ${group('Operación', ['home', 'planes', 'dash', 'pulls', 'inv', 'lbl'])}
+          ${group('Indicadores', ['prod', 'rep'])}
+          ${group('Registros', ['val', 'seq'])}
+          ${group('Sistema', ['files', admin ? 'config' : null])}
+          <a class="sd-it" href="${App.LINKS.mobile}" data-qxapp="QORVEX_MOBILE" data-local="../QORVEX_MOBILE/index.html" rel="noopener" title="Abrir QORVEX MOBILE en su propia ventana">${ICO.mobile}<span class="tx"><b>QORVEX MOBILE ↗</b><small>Abrir en su propia ventana</small></span></a>
+        </nav>
+        <div class="sd-foot">
+          ${u ? `<div class="sd-user"><b>${esc(u.name)}</b><span>${esc(App.auth.roleTxt(u.role))}</span></div>` : ''}
+          ${mode ? `<button class="sd-btn sd-mode ${canEd ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${canEd ? ICO.pen : ICO.eye}<span class="tx">${canEd ? 'Editor' : 'Consulta'}</span></button>` : ''}
+          <button class="sd-btn" id="bTheme" title="Cambiar a tema ${isLight() ? 'oscuro' : 'claro'}">${isLight() ? ICO.sun : ICO.moon}<span class="tx">Tema ${isLight() ? 'claro' : 'oscuro'}</span></button>
+          ${mode ? `<button class="sd-btn" id="bOut" title="Cerrar sesión y liberar el modo Editor">${ICO.out}<span class="tx">Cerrar sesión</span></button>` : ''}
+          <div class="sd-ver">V 13.05.00</div>
+        </div>
+      </aside>
+      <div class="mwrap">
+        <header class="top slim">
+          <div class="pg-t"><b>${esc(pt)}</b><small>${esc(pd)}</small></div>
+          <span class="sp"></span>
+          ${S.dir ? `<div class="chip" title="Carpeta de trabajo">📁 ${esc(S.dir.name)}</div>` : ''}
+          ${S.dir ? `<button class="btn ghost" id="bChange" title="Cambiar carpeta de trabajo">Carpeta</button>` : ''}
+          ${canEd || !mode ? `<button class="btn save ${dirty ? 'on' : ''}" id="bSave" ${App.S.L.planes && canEd ? '' : 'disabled'}>${ICO.save}<span>Guardar${dirty ? ' •' : ''}</span></button>` : ''}
+        </header>
+        <main id="main"></main>
+        <footer class="foot"><b>QORVEX</b> · CONNECT · VALIDATE · SEQUENCE · OPTIMIZE &nbsp;|&nbsp; © 2026 CH Industrial Solutions · Todos los derechos reservados · <a href="#" id="bLegal" style="color:inherit;text-decoration:underline">Aviso legal</a></footer>
+      </div>
+      </div>
       <div id="toasts"></div>`;
     document.body.classList.toggle('fullview', TAB === 'planes' && PF.view === 'all' && !!S.result);
-    $$('.tab,.sbtn').forEach((b) => (b.onclick = () => go(b.dataset.t)));
+    $$('.sd-it[data-t]').forEach((b) => (b.onclick = () => go(b.dataset.t)));
+    $('#bSide').onclick = () => { SIDE.min = !SIDE.min; try { localStorage.setItem('qx_side_min', SIDE.min ? '1' : ''); } catch (e) {} $('.shell').classList.toggle('min', SIDE.min); $('#bSide').title = SIDE.min ? 'Mostrar menú con nombres' : 'Mostrar solo íconos'; fitTable(); };
     if ($('#bChange')) $('#bChange').onclick = () => guardDirty().then((ok) => ok && App.connect(false));
     if ($('#bSave')) $('#bSave').onclick = saveDialog;
     if ($('#bLegal')) $('#bLegal').onclick = (e) => { e.preventDefault(); App.legal.open(); };
@@ -104,7 +141,7 @@
     $('#bTheme').onclick = () => { setTheme(isLight() ? 'dark' : 'light'); render(); };
     ({ home: () => App.mods.home($('#main')), files: vFiles, planes: vPlanes, pulls: vPulls, dash: () => App.dash.render($('#main')),
       val: () => App.hojas.render($('#main'), 'val'), seq: () => App.hojas.render($('#main'), 'seq'),
-      prod: () => App.prod.render($('#main')), lbl: () => window.QXLabels.render($('#main'), LBLCTX), config: () => App.cfg.render($('#main')) })[TAB]();
+      prod: () => App.prod.render($('#main')), lbl: () => window.QXLabels.render($('#main'), LBLCTX), inv: () => App.inv.render($('#main')), rep: () => App.ess.render($('#main')), config: () => App.cfg.render($('#main')) })[TAB]();
   }
 
   async function guardDirty() {
@@ -170,9 +207,11 @@
         </div>`;
       }).join('')}</div>
       ${App.ready() ? `<div class="banner ok">Todo listo. Ve a <a href="#" id="toPlanes">DATA</a> para ejecutar el cruce.</div>` : ''}
-      <div class="note"><b>Antes de guardar:</b> cierra en Excel los archivos que se van a actualizar (Planes y Pulls). Windows bloquea un archivo abierto y el guardado fallaría sin dañar nada.</div>`;
+      <div class="note"><b>Antes de guardar:</b> cierra en Excel los archivos que se van a actualizar (Planes y Pulls). Windows bloquea un archivo abierto y el guardado fallaría sin dañar nada.</div>
+      ${App.secv ? App.secv.panel() : ''}`;
     $$('select[data-role]').forEach((s) => (s.onchange = () => { S.roleFile[s.dataset.role] = s.value; delete S.L[s.dataset.role]; render(); }));
     $('#bRefresh').onclick = async () => { await App.refreshList(); render(); };
+    if (App.secv) App.secv.bind(render);
     $('#bLoad').onclick = () => guardDirty().then((ok) => ok && App.loadAll());
     $('#bInteg').onclick = () => App.integrar.open();
     $('#bDup').onclick = () => App.dup.open('val');
@@ -253,6 +292,7 @@
     m.innerHTML = `
       <div class="pfix">
       <div class="ptitle"><h1>DATA <small>Cruce de información</small></h1><span class="muted">${R ? `Cruce ejecutado ${App.fDT(R.stats.ran)}${S.planesDirty ? ' · <b class="pend">sin guardar en Excel</b>' : ' · guardado'}` : 'El cruce aún no se ejecuta'}</span>
+        ${R ? `<span class="muted small entinfo" id="entInfo" title="Los IDs que aparecen en ${App.ent.NAME} (hoja Form1) se muestran como ENTREGADO. Pasa el mouse para ver la fecha.">${esc(App.ent.info())}</span>` : ''}
         <span class="sp"></span>${R ? `<span class="muted small">Doble clic en una celda para editarla</span>${S.edits.length ? `<span class="pill warn">${fmtN(S.edits.length)} edición(es) sin guardar</span>` : ''}<button class="btn" id="bPrint">🖨 Imprimir hoja de secuencia</button><button class="btn" id="bExp">Exportar a Excel</button>` : ''}<button class="btn" id="bPlanes" title="Reconectar o seleccionar Planes">Cargar Planes</button><button class="btn primary" id="bRun">${R ? 'Volver a ejecutar' : 'Ejecutar cruce'}</button></div>
       ${R ? `<div class="kpis" id="kpis"></div>
       <div class="filters">
@@ -270,7 +310,7 @@
       </div>` : ''}
       </div>
       ${R ? '<div class="tw fit" id="tw"></div><div class="pager" id="pg"></div>' : `<div class="empty">Presiona <b>Ejecutar cruce</b> para llenar las columnas 5 a 20 con los datos de Validación, Secuencia y Pulls.<br><span class="muted small">Nada se escribe en el Excel hasta que presiones “Guardar en Excel”.</span></div>`}`;
-    $('#bRun').onclick = () => { App.execute(); render(); };
+    $('#bRun').onclick = async () => { App.execute(); try { await App.ent.load(true); } catch (e) {} render(); };
     $('#bPlanes').onclick = () => guardDirty().then((ok) => ok && App.planesDialog());
     if (!R) return;
     $('#bExp').onclick = exportDialog;
@@ -315,6 +355,8 @@
     $('#fa').onchange = (e) => { PF.alert = e.target.checked; re(); };
     $$('.seg [data-v]').forEach((b) => (b.onclick = () => { PF.view = b.dataset.v; setFull(PF.view === 'all'); render(); }));
     $('#fr').onclick = () => { Object.assign(PF, PF0()); render(); };
+    App.ent.onChange = () => { if (TAB !== 'planes' || !$('#tw')) return; PF._scroll = $('#tw').scrollTop; draw(); if ($('#entInfo')) $('#entInfo').textContent = App.ent.info(); };
+    if (App.ent.stale()) App.ent.load(!App.ent.state.at).then((ch) => { if (ch) App.ent.onChange(); else if ($('#entInfo')) $('#entInfo').textContent = App.ent.info(); }).catch(() => {});
     draw();
   }
 
@@ -391,9 +433,16 @@
     if (BASE.includes(k)) return `<td class="${k === 'job' ? 'b' : ''}">${esc(show(x.base[k]))}</td>`;
     const v = x.out[k];
     if (k === 'estado') return `<td><div class="est" title="${x.onHand} de 6 componentes on hand">${[0, 1, 2, 3, 4, 5].map((i) => `<i class="${i < x.onHand ? 'on' : ''}"></i>`).join('')}<span>${x.onHand}/6</span></div></td>`;
+    if (x.entj && x.entj[k] && (v === App.motor.SHORT || v === App.motor.PEND)) { const ej = x.entj[k]; return `<td class="deliv entj" title="Entrega por job · ${esc(ej.fecha || '')} ${esc(String(ej.hora || '').slice(0, 5))}${ej.name ? ` · ${esc(ej.name)}` : ''} · ${esc(ej.dev)}${ej.motivo ? ` · ${esc(ej.motivo)}` : ''}">ENTREGADO</td>`; }
     if (v === App.motor.SHORT) return '<td class="short">SHORTAGE</td>';
     if (v === App.motor.PEND) return '<td class="pendc">PENDIENTE</td>';
     if (k === 'start' && typeof v === 'number') return `<td>${App.fSerial(v)}</td>`;
+    const en = DELIV.has(k) && v != null && v !== '' && App.ent && App.ent.get(v);
+    const ej = x.entj && x.entj[k];
+    if (ej) return `<td class="deliv entj" title="Entrega por job · ${esc(ej.fecha || '')} ${esc(String(ej.hora || '').slice(0, 5))}${ej.name ? ` · ${esc(ej.name)}` : ''} · ${esc(ej.dev)}${ej.motivo ? ` · ${esc(ej.motivo)}` : ''}${v != null && v !== '' && v !== App.motor.SHORT ? ` · caja ${esc(show(v))}` : ''}">ENTREGADO</td>`;
+    const dv = x.dev && x.dev[k];
+    if (dv && !en) return `<td class="devc" title="Devolución de línea · caja ${esc(show(v))} · ${esc(dv.fecha || '')} ${esc(String(dv.hora || '').slice(0, 5))}${dv.name ? ` · ${esc(dv.name)}` : ''} · ${esc(dv.dev)}">${esc(show(v))} · DEV</td>`;
+    if (en) return `<td class="deliv" title=""${esc(show(v))} · Entregado ${esc(en.fecha)}${en.name ? ` · ${esc(en.name)}` : ''}${en.com ? ` · ${esc(en.com)}` : ''}">ENTREGADO</td>`;
     const al = x.alert[k];
     return `<td>${esc(show(v))}${al ? ` <span class="al" title="${esc(al)}">⚠</span>` : ''}</td>`;
   }
@@ -546,5 +595,5 @@
       buttons: [{ t: 'Entendido', cls: 'primary' }] });
   }
 
-  App.ui = { render, go, showResults, exportDialog, saveDialog, cellHtml: (x, k) => cellHtml(x, k), ICO, isLight };
+  App.ui = { render, go, showResults, exportDialog, saveDialog, cellHtml: (x, k) => cellHtml(x, k), ICO, isLight, COLS, BASE };
 })(window.App);
