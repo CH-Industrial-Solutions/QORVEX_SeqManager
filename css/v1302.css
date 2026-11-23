@@ -112,3 +112,11 @@ table.ess tr.tot td{font-weight:800}
 table.ess tr.ivd th{background:#fff;color:#111;font-weight:500;font-style:italic}
 table.ess td.g{background:#EDEDED;font-weight:800}
 .dpanel .essp{color:#0A1A3A;margin:0 0 6px;line-height:1.5}
+
+/* ---------- V 13.05: seguridad y contraste en CONFIG ---------- */
+.dpanel.cfg .about,.dpanel.cfg .about b,.dpanel.cfg .lbchk,.dpanel .lbchk{color:#0A1A3A}
+.dpanel.cfg .secg b{color:#0A1A3A}
+.dpanel.cfg .secg .essp{margin:4px 0 10px}
+.lg-key{display:block;text-align:center;font-size:13px;font-weight:600;margin-top:2px;text-decoration:none}
+.lg-note{background:rgba(34,211,238,.12);border:1px solid rgba(34,211,238,.35);border-radius:10px;padding:8px 10px;font-size:13px}
+.vchk td.bad{color:#C00000;font-weight:700}.vchk td.good{color:#0F7A43;font-weight:700}
