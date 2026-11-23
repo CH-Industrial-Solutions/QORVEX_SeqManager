@@ -1,26 +1,25 @@
-# QORVEX MOBILE · Validación y Secuencia (V 13)
+# QORVEX · Manufacturing Intelligence Engine (V 13)
 
 © 2026 CH Industrial Solutions · Ing. Carlos Alberto Hernández Hernández · Todos los derechos reservados. Ver LEGAL.md, LICENSE.txt y TERCEROS.txt.
 
-Publicado en GitHub Pages: https://ch-industrial-solutions.github.io/Qorvex-Mobil/
+Publicado en GitHub Pages: https://ch-industrial-solutions.github.io/QORVEX_SeqManager/
 
 ## Uso
-- Chrome o Edge en tableta o PC con Windows. Primera vez: elegir **TAB1** o **TAB2** (después solo lo cambia un Administrador) → conectar la carpeta **Data Base**.
-- **Iniciar sesión / Registrarse** con deslizador. Sin clave fija (V 13.05): el primer registro de la carpeta es el **Admin master**.
-- Se elige supervisor antes de capturar. Capturas en `Validacion_TAB1_aaaa-mm.txt` / `Secuencia_TAB1_aaaa-mm.txt`.
-- Usuarios, turnos, metas, supervisores y fondo del login vienen de `Config_QORVEX.json` (misma lista que QORVEX Motor).
+- Edge o Chrome en Windows → **Conectar carpeta** (carpeta compartida **Data Base**) → **Iniciar sesión**.
+- Sin clave fija (V 13.05). En una carpeta nueva, el primero en registrarse es el **Admin master** (Supervisor / Admin); su contraseña cifrada vive en Data Base\Seguridad y solo él la cambia. Los demás se registran (quedan pendientes) o los da de alta un Supervisor / Admin en **CONFIG**.
+- Roles: **Administrador** (todo) · **Capturista** (Motor y Mobile, sin CONFIG) · **Validador** (solo QORVEX MOBILE).
+- Editor / Consulta: una sola persona edita a la vez; el modo Editor se cierra tras 30 min sin movimiento.
+- CONFIG: turnos, días, festivos, metas, supervisores, usuarios (misma lista que Mobile), fondo del login y logos de empresa (salen en reportes impresos).
 
 ## Estructura
-- Todo el programa está en `index.html` (incluye xlsx-js-style, Apache 2.0; licencia en `js/lib/`).
+- `index.html` · `css/` · `img/` (logo QORVEX, icono CH, fondos con marca CH) · `js/` (un archivo por módulo; `js/lib/` = xlsx-js-style, Apache 2.0).
+- Datos: nunca en este repositorio; viven en la carpeta Data Base (TXT de capturas, Excel de Planes/Pulls, Config_QORVEX.json).
 
-QORVEX (Motor): https://ch-industrial-solutions.github.io/QORVEX_SeqManager/
+QORVEX MOBILE: https://ch-industrial-solutions.github.io/Qorvex-Mobil/
 
 
 ## Etiquetas 6 × 4
 Pestaña **ETIQUETAS** (misma en QORVEX y QORVEX MOBILE): genera, imprime, reimprime y anula etiquetas de Validación, Secuencia y Línea. Registro en TXT dentro de `Data Base/Etiquetas/`; los consecutivos se reservan con candado para que dos equipos nunca saquen el mismo ID. Código compartido: `js/etiquetas.js` (en MOBILE va incluido dentro de `index.html`). Código de barras Code 128 propio, sin librerías externas.
 
-## Estructura (V 13.06)
-- `index.html` — página (solo enlaza los archivos).
-- `css/` — estilos: `mobile.css` (base), `tema-claro.css`, `diseno.css`, `diseno-extra.css`.
-- `js/` — código: `mobile.js` (captura), `capturas-txt.js` (TXT en Data Base), `sesion.js` (inicio de sesión y usuarios), `etiquetas.js` (igual al del Motor), `qxsec.js` (seguridad, igual al del Motor), `seguridad-mobile.js`, `tema.js`, `tema-inicio.js`, `abrir-otra-app.js`, `lib/` (SheetJS).
-- `img/` — imágenes con los **mismos nombres que en QORVEX (Motor)**. Ver `img/LEEME.txt` para saber dónde sale cada una y qué tamaño usar.
+## Imágenes (V 13.06)
+`img/` tiene las imágenes con los **mismos nombres que en QORVEX MOBILE** (almacen-claro.jpg, fondo-login-1.jpg, logo-etiqueta.png…). Para cambiar una, reemplaza el archivo con el mismo nombre en los dos repositorios. Ver `img/LEEME.txt`.
