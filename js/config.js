@@ -266,7 +266,7 @@
           </div>
         </div></div>
 
-      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.06.00</span></div>
+      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.06.01</span></div>
         <div class="about"><img src="img/icono-ch-180.png" alt="CH Industrial Solutions"><div><b>Desarrollado por CH Industrial Solutions</b><br>Titular: Ing. Carlos Alberto Hernández Hernández<br>charliealberth290116@outlook.es · 8115377033 · General Escobedo, Nuevo León, México</div></div></div>
 
       <div class="dpanel cfg"><div class="dph"><h3>Seguridad</h3><span class="muted small">Admin master · sello de la configuración · contraseñas · sesiones</span></div>

@@ -51,7 +51,7 @@
   function show() {
     return new Promise((resolve) => {
       const n = wall();
-      $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/fondo-login-${n}.jpg')">
+      $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/fondo-login-${n}.jpg')"><img class="lg-chmark" src="img/logo-ch-blanco.svg" alt="CH Industrial Solutions">
         <div class="lg-card">
           <div class="lg-brand"><img src="img/logo-qorvex-${App.ui && App.ui.isLight && App.ui.isLight() ? 'claro' : 'oscuro'}.png" alt="QORVEX"></div>
           <div class="lg-sw" role="tablist"><span class="lg-knob"></span><button type="button" class="on" data-p="0">Iniciar sesión</button><button type="button" data-p="1">Registrarse</button></div>
@@ -115,7 +115,7 @@
   async function gate() {
     if (ME) return;
     const saved = App.S.savedDir;
-    $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/fondo-login-${wall()}.jpg')">
+    $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/fondo-login-${wall()}.jpg')"><img class="lg-chmark" src="img/logo-ch-blanco.svg" alt="CH Industrial Solutions">
       <div class="lg-card">
         <div class="lg-brand"><img src="img/logo-qorvex-${App.ui && App.ui.isLight && App.ui.isLight() ? 'claro' : 'oscuro'}.png" alt="QORVEX"></div>
         <div class="lg-pane" style="width:100%">
