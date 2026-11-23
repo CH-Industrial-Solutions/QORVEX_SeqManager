@@ -4,6 +4,7 @@
    - Primera línea: encabezados. Cada línea siguiente: un registro.
    - Solo se AGREGAN líneas al final (nunca se reescribe el archivo).
    - Un Tab o salto de línea dentro de un dato se cambia por un espacio.
+   - V 13.05: cada renglón nuevo lleva al final su código de verificación (Verif).
    ===================================================================== */
 (function (App) {
   /* Columnas de los TXT de captura (iguales en QORVEX MOBILE) */
@@ -44,8 +45,10 @@
     try { fh = await dir.getFileHandle(name); } catch (e) { if (e.name !== 'NotFoundError') throw e; fh = await dir.getFileHandle(name, { create: true }); }
     const f = await fh.getFile();
     let pre = '';
-    if (f.size === 0) pre = `﻿${toLine(head)}\r\n`;
+    if (f.size === 0) pre = `﻿${toLine([...head, 'Verif'])}\r\n`;
     else { const last = new Uint8Array(await f.slice(f.size - 1).arrayBuffer())[0]; if (last !== 10) pre = '\r\n'; }
+    // código de verificación encadenado al último renglón (detecta renglones borrados o cambiados a mano)
+    lines = await window.QXsec.chain(f.size ? await f.text() : '', lines);
     const body = lines.join('\r\n') + '\r\n';
     let w = null;
     try {

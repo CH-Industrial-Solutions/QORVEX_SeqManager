@@ -106,14 +106,14 @@
           ${group('Indicadores', ['prod', 'rep'])}
           ${group('Registros', ['val', 'seq'])}
           ${group('Sistema', ['files', admin ? 'config' : null])}
-          <a class="sd-it" href="${App.LINKS.mobile}" target="_blank" rel="noopener" title="Abrir QORVEX MOBILE en otra pestaña">${ICO.mobile}<span class="tx"><b>QORVEX MOBILE ↗</b><small>Abrir en otra pestaña</small></span></a>
+          <a class="sd-it" href="${App.LINKS.mobile}" data-qxapp="QORVEX_MOBILE" data-local="../QORVEX_MOBILE/index.html" rel="noopener" title="Abrir QORVEX MOBILE en su propia ventana">${ICO.mobile}<span class="tx"><b>QORVEX MOBILE ↗</b><small>Abrir en su propia ventana</small></span></a>
         </nav>
         <div class="sd-foot">
           ${u ? `<div class="sd-user"><b>${esc(u.name)}</b><span>${esc(App.auth.roleTxt(u.role))}</span></div>` : ''}
           ${mode ? `<button class="sd-btn sd-mode ${canEd ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${canEd ? ICO.pen : ICO.eye}<span class="tx">${canEd ? 'Editor' : 'Consulta'}</span></button>` : ''}
           <button class="sd-btn" id="bTheme" title="Cambiar a tema ${isLight() ? 'oscuro' : 'claro'}">${isLight() ? ICO.sun : ICO.moon}<span class="tx">Tema ${isLight() ? 'claro' : 'oscuro'}</span></button>
           ${mode ? `<button class="sd-btn" id="bOut" title="Cerrar sesión y liberar el modo Editor">${ICO.out}<span class="tx">Cerrar sesión</span></button>` : ''}
-          <div class="sd-ver">V 13.04.00</div>
+          <div class="sd-ver">V 13.05.00</div>
         </div>
       </aside>
       <div class="mwrap">
@@ -207,9 +207,11 @@
         </div>`;
       }).join('')}</div>
       ${App.ready() ? `<div class="banner ok">Todo listo. Ve a <a href="#" id="toPlanes">DATA</a> para ejecutar el cruce.</div>` : ''}
-      <div class="note"><b>Antes de guardar:</b> cierra en Excel los archivos que se van a actualizar (Planes y Pulls). Windows bloquea un archivo abierto y el guardado fallaría sin dañar nada.</div>`;
+      <div class="note"><b>Antes de guardar:</b> cierra en Excel los archivos que se van a actualizar (Planes y Pulls). Windows bloquea un archivo abierto y el guardado fallaría sin dañar nada.</div>
+      ${App.secv ? App.secv.panel() : ''}`;
     $$('select[data-role]').forEach((s) => (s.onchange = () => { S.roleFile[s.dataset.role] = s.value; delete S.L[s.dataset.role]; render(); }));
     $('#bRefresh').onclick = async () => { await App.refreshList(); render(); };
+    if (App.secv) App.secv.bind(render);
     $('#bLoad').onclick = () => guardDirty().then((ok) => ok && App.loadAll());
     $('#bInteg').onclick = () => App.integrar.open();
     $('#bDup').onclick = () => App.dup.open('val');

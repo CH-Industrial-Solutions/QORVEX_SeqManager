@@ -64,6 +64,7 @@
       });
       await App.cfg.load();
       await App.auth.ensure();
+      if (App.cfg.seal === 'mal') toast(App.auth.TAMPER, 'warn', 12000);
       await App.lock.enter();
       // carpeta nueva: se crea Config_QORVEX.json de cero (turnos por defecto, sin supervisores ni usuarios)
       if (!App.cfg.loaded && App.lock.canEdit()) { try { await App.cfg.save(App.cfg.get()); toast('Carpeta nueva: se creó Config_QORVEX.json. Da de alta supervisores, usuarios y metas en CONFIG.', 'ok', 7000); } catch (e) { toast(`No se pudo crear Config_QORVEX.json: ${e.message}`, 'warn', 6000); } }
@@ -163,6 +164,7 @@
     if (errs.length) await App.modal({ title: 'Algunos archivos no se cargaron', body: `<ul class="errs">${errs.map((e) => `<li>${App.esc(e)}</li>`).join('')}</ul>` });
     else toast('Archivos cargados', 'ok');
     App.ui.render();
+    if (App.secv) App.secv.run(true).then(() => { if (App.ui && (App.ui.tab ? App.ui.tab() === 'files' : false)) App.ui.render(); });
     if (!S.L.planes) await planesDialog();
     else if (ready()) { execute(true); App.ui.render(); }
   }

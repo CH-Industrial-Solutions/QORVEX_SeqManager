@@ -10,7 +10,7 @@
   const { $, $$, esc, fmtN, toast, pad } = App;
   const NAME = 'Config_QORVEX.json';
   const DAYS = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-  const ROLE_N = { admin: 'Administrador', capturista: 'Capturista', validador: 'Validador' };
+  const ROLE_N = { admin: 'Supervisor / Admin', capturista: 'Capturista', validador: 'Validador' };
   const roleOf = (r) => (r === 'admin' || r === 'capturista' ? r : 'validador'); // roles anteriores (ambos, secuenciador…) → Validador
   const goal0 = () => ({ val: { jobs: 0, cont: 0 }, seq: { jobs: 0, cont: 0 } });
   const DEF = () => ({
@@ -21,10 +21,12 @@
       { n: 'Noche', s: '22:30', e: '07:00', days: [1, 2, 3, 4, 5], goals: goal0() },
     ],
     supervisors: [], users: [], holidays: [],
-    motor: { idleMin: 30 },
+    motor: { idleMin: 30 }, mobile: { idleMin: 15 },
     brand: { wall: 1, logos: [] },
   });
-  let CFG = DEF(), META = { loaded: false, lastModified: 0 };
+  let CFG = DEF(), META = { loaded: false, lastModified: 0, seal: 'sin', master: null };
+  const SEC = () => window.QXsec;
+  const isMaster = () => !!(App.auth && App.auth.user() && META.master && App.auth.user().emp === META.master.emp);
 
   /** External Sequence Status: rate diario, CIAs del reporte y horario de generación */
   const DEF_CIAS = [['L1', '011'], ['L2', '065'], ['SATX', '044'], ['TULSA', '014'], ['SAP', '002'], ['TSC', '498']];
@@ -42,9 +44,19 @@
       goals: { val: { jobs: +(x.goals?.val?.jobs) || 0, cont: +(x.goals?.val?.cont) || 0 }, seq: { jobs: +(x.goals?.seq?.jobs) || 0, cont: +(x.goals?.seq?.cont) || 0 } },
     }));
     o.supervisors = (o.supervisors || []).map((s) => ({ emp: String(s.emp || '').trim().toUpperCase(), name: String(s.name || '').trim(), active: s.active !== false })).filter((s) => s.emp && s.name);
-    o.users = (o.users || []).map((u) => ({ emp: String(u.emp || '').trim().toUpperCase(), name: String(u.name || '').trim(), role: roleOf(u.role), pw: u.pw || '', pwAt: +u.pwAt || 0, must: !!u.must, active: u.active !== false, status: u.status === 'pendiente' ? 'pendiente' : 'activo', created: +u.created || 0, by: u.by || '' })).filter((u) => u.emp && u.name && u.emp !== 'ADMIN');
+    o.users = (o.users || []).map((u) => ({ emp: String(u.emp || '').trim().toUpperCase(), name: String(u.name || '').trim(), role: roleOf(u.role), pw: u.pw || '', pwAt: +u.pwAt || 0, must: !!u.must, active: u.active !== false, status: u.status === 'pendiente' ? 'pendiente' : 'activo', created: +u.created || 0, by: u.by || '' })).filter((u) => u.emp && u.name && u.emp !== 'ADMIN' && u.emp !== 'MAESTRA');
+    // V 13.05: Supervisor = rol Supervisor / Admin. Los supervisores de la lista anterior pasan a ser usuarios con ese rol
+    // (sin contraseña hasta que el Administrador se la asigne con «Asignar»).
+    o.supervisors.forEach((sp) => {
+      const u = o.users.find((x) => x.emp === sp.emp);
+      if (u) { if (u.role !== 'admin') u.role = 'admin'; return; }
+      o.users.push({ emp: sp.emp, name: sp.name, role: 'admin', pw: '', pwAt: 0, must: true, active: sp.active, status: 'activo', created: Date.now(), by: 'Migrado de Supervisores' });
+    });
+    o.supervisors = [];
     o.holidays = (o.holidays || []).filter((h) => /^\d{4}-\d{2}-\d{2}$/.test(h.d)).map((h) => ({ d: h.d, n: String(h.n || '').trim() })).sort((a, b) => a.d.localeCompare(b.d));
     o.motor = { idleMin: Math.max(5, +(o.motor && o.motor.idleMin) || 30) };
+    o.mobile = { idleMin: Math.max(0, Math.min(240, o.mobile && o.mobile.idleMin != null ? +o.mobile.idleMin || 0 : 15)) };
+    delete o.sello;
     o.brand = { wall: (o.brand && +o.brand.wall === 2) ? 2 : 1, logos: ((o.brand && o.brand.logos) || []).filter((x) => /^data:image\//.test(x)).slice(0, 3) };
     o.labels = window.QXLabels ? window.QXLabels.norm(o) : (o.labels || {}); // etiquetas 6×4: componentes, prefijos, líneas, logo
     o.report = normReport(o.report); // External Sequence Status: rate, CIAs y programación
@@ -54,10 +66,12 @@
   async function load() {
     const S = App.S; if (!S.dir) return CFG;
     try {
-      const raw = await App.txt.readOpt(S.dir, NAME);
-      CFG = normalize(raw ? JSON.parse(raw.text.replace(/^﻿/, '')) : null);
-      META = { loaded: !!raw, lastModified: raw ? raw.lastModified : 0 };
-    } catch (e) { toast(`${NAME}: no se pudo leer (${e.message}). Se usan valores por defecto.`, 'warn', 6000); CFG = normalize(null); META = { loaded: false, lastModified: 0 }; }
+      const raw = await App.txt.readOpt(S.dir, NAME), obj = raw ? JSON.parse(raw.text.replace(/^﻿/, '')) : null;
+      const seal = obj ? await SEC().sealCheck(obj) : 'sin';
+      const master = await SEC().readMaster(S.dir);
+      CFG = normalize(obj); SEC().enforceMaster(CFG.users, master); // el Admin master siempre conserva su rol y contraseña
+      META = { loaded: !!raw, lastModified: raw ? raw.lastModified : 0, seal, master };
+    } catch (e) { toast(`${NAME}: no se pudo leer (${e.message}). Se usan valores por defecto.`, 'warn', 6000); CFG = normalize(null); META = { loaded: false, lastModified: 0, seal: 'sin', master: null }; }
     return CFG;
   }
   async function save(next) {
@@ -65,9 +79,10 @@
     if (App.lock && !App.lock.canEdit()) throw new Error('Modo consulta: no se puede guardar la configuración.');
     const cur = await App.txt.readOpt(S.dir, NAME);
     const c = normalize(next);
+    const curSeal = cur ? await SEC().sealCheck(JSON.parse(cur.text.replace(/^\uFEFF/, ''))) : 'sin';
     // Si una tableta cambió el archivo mientras se editaba (por ejemplo, creó un usuario o cambió su contraseña),
     // se conservan esos cambios de usuarios en lugar de rechazar el guardado.
-    if (cur && cur.lastModified !== META.lastModified) {
+    if (cur && curSeal !== 'mal' && cur.lastModified !== META.lastModified) {
       try {
         const disk = normalize(JSON.parse(cur.text.replace(/^\uFEFF/, ''))), base = new Set((CFG.users || []).map((u) => u.emp));
         disk.users.forEach((du) => {
@@ -77,6 +92,8 @@
         });
       } catch (e) { console.warn('config en disco', e); }
     } c.updated = new Date().toISOString(); c.by = (App.lock && App.lock.who()) || '';
+    SEC().enforceMaster(c.users, await SEC().readMaster(S.dir));
+    c.sello = await SEC().seal(c);
     if (!(await App.fs.ensurePermission(S.dir))) throw new Error('No se autorizó la escritura en la carpeta.');
     if (cur) { try { await App.fs.backup(S.dir, NAME, new TextEncoder().encode(cur.text)); } catch (e) { console.warn(e); } }
     await App.txt.writeWhole(S.dir, NAME, JSON.stringify(c, null, 2));
@@ -89,13 +106,42 @@
     const S = App.S;
     if (!(await App.fs.ensurePermission(S.dir))) throw new Error('No se autorizó la escritura en la carpeta.');
     const cur = await App.txt.readOpt(S.dir, NAME);
-    const c = normalize(cur ? JSON.parse(cur.text.replace(/^\uFEFF/, '')) : null);
-    if (u.emp === 'ADMIN' || c.users.some((x) => x.emp === u.emp)) throw new Error('Ese número de empleado ya está registrado.');
-    c.users.push({ emp: u.emp, name: u.name, role: 'validador', pw: u.pw, pwAt: Date.now(), must: false, active: true, status: 'pendiente', created: Date.now(), by: 'Registro · QORVEX' });
-    c.updated = new Date().toISOString(); c.by = `Registro de ${u.name}`;
+    const obj = cur ? JSON.parse(cur.text.replace(/^\uFEFF/, '')) : null;
+    const c = normalize(obj);
+    if (u.emp === 'ADMIN' || u.emp === 'MAESTRA' || c.users.some((x) => x.emp === u.emp)) throw new Error('Ese número de empleado ya está registrado.');
+    const first = u.first === true && !(await SEC().readMaster(S.dir));
+    if (first && c.users.some((x) => x.role === 'admin' && x.status !== 'pendiente' && x.active && x.pw)) throw new Error('Ya hay un Supervisor / Admin: inicia sesión o pídele que te dé de alta.');
+    c.users.push({ emp: u.emp, name: u.name, role: first ? 'admin' : 'validador', pw: u.pw, pwAt: Date.now(), must: false, active: true, status: first ? 'activo' : 'pendiente', created: Date.now(), by: first ? 'Configuración inicial · QORVEX' : 'Registro · QORVEX' });
+    c.updated = new Date().toISOString(); c.by = `${first ? 'Configuración inicial' : 'Registro'} de ${u.name}`;
+    if (first && !(await SEC().readMaster(S.dir))) await SEC().writeMaster(S.dir, { emp: u.emp, name: u.name, pw: u.pw }); // primer usuario = Admin master
+    SEC().enforceMaster(c.users, await SEC().readMaster(S.dir));
+    c.sello = await SEC().seal(c);
     await App.txt.writeWhole(S.dir, NAME, JSON.stringify(c, null, 2));
     await load();
   }
+  /** Cambia una contraseña con cifrado anterior al formato nuevo (solo ese usuario, sin tocar lo demás) */
+  async function upgradePw(emp, oldHash, newHash) {
+    const S = App.S; if (!S.dir || !(await App.fs.ensurePermission(S.dir))) return;
+    const cur = await App.txt.readOpt(S.dir, NAME); if (!cur) return;
+    const obj = JSON.parse(cur.text.replace(/^\uFEFF/, ''));
+    const m = await SEC().readMaster(S.dir);
+    if (m && m.emp === emp && m.pw === oldHash) await SEC().writeMaster(S.dir, { ...m, pw: newHash });
+    const u = (obj.users || []).find((x) => String(x.emp || '').toUpperCase() === emp); if (!u || u.pw !== oldHash) { await load(); return; }
+    u.pw = newHash; SEC().enforceMaster(obj.users, await SEC().readMaster(S.dir)); obj.sello = await SEC().seal(obj);
+    await App.txt.writeWhole(S.dir, NAME, JSON.stringify(obj, null, 2));
+    await load();
+  }
+  /** Carpeta de una versión anterior sin Admin master: el primer Supervisor / Admin que entra lo es */
+  async function claimMaster(emp, pwHash) {
+    const S = App.S; if (!S.dir || (await SEC().readMaster(S.dir))) return false;
+    const u = CFG.users.find((x) => x.emp === emp); if (!u || u.role !== 'admin') return false;
+    if (!(await App.fs.ensurePermission(S.dir))) return false;
+    await SEC().writeMaster(S.dir, { emp, name: u.name, pw: pwHash || u.pw }); await load(); return true;
+  }
+  /** Supervisores = usuarios activos con rol Supervisor / Admin */
+  const sups = () => CFG.users.filter((u) => u.role === 'admin' && u.active && u.status !== 'pendiente').map((u) => ({ emp: u.emp, name: u.name, active: true }));
+  /** ¿Hace falta crear el primer Supervisor / Admin? (carpeta nueva) */
+  const needsFirst = () => !META.master && !CFG.users.some((u) => u.role === 'admin' && u.status !== 'pendiente' && u.active && u.pw);
 
   /** Imagen subida → PNG reducido (máx. 360×140) como data URL */
   function shrink(file) {
@@ -160,10 +206,10 @@
       </div>
 
       <div class="dgrid cfg2">
-        <div class="dpanel cfg"><div class="dph"><h3>Supervisores</h3><span class="muted small">${fmtN(D.supervisors.filter((s) => s.active).length)} activos</span><span class="sp"></span>${ro ? '' : '<button class="btn sm" id="spAdd">+ Agregar</button>'}</div>
-          <table class="t mini"><thead><tr><th>No. empleado</th><th>Nombre</th><th>Activo</th><th></th></tr></thead><tbody>
-          ${D.supervisors.map((s, i) => `<tr><td><input class="input" data-sp="${i}" data-k="emp" value="${esc(s.emp)}" ${dis}></td><td><input class="input" data-sp="${i}" data-k="name" value="${esc(s.name)}" ${dis}></td>
-            <td><input type="checkbox" data-sp="${i}" data-k="active" ${s.active ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-spdel="${i}">✕</button>`}</td></tr>`).join('') || '<tr><td colspan="4" class="muted">Sin supervisores. Agrégalos para que el validador elija a su encargado al iniciar sesión.</td></tr>'}
+        <div class="dpanel cfg"><div class="dph"><h3>Supervisores</h3><span class="muted small">${fmtN(D.users.filter((u) => u.role === 'admin' && u.active && u.status !== 'pendiente').length)} activos</span></div>
+          <div class="essp">Los supervisores son los usuarios con rol <b>Supervisor / Admin</b> (tabla Usuarios). Aparecen en la tableta al iniciar sesión para elegir al supervisor del turno.</div>
+          <table class="t mini"><thead><tr><th>No. empleado</th><th>Nombre</th><th>Contraseña</th></tr></thead><tbody>
+          ${D.users.filter((u) => u.role === 'admin' && u.active && u.status !== 'pendiente').map((u) => `<tr><td class="mono">${esc(u.emp)}</td><td>${esc(u.name)}</td><td>${u.pw ? '<span class="pill ok">asignada</span>' : '<span class="pill warn">sin asignar</span>'}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Sin supervisores. Da rol Supervisor / Admin a quien corresponda en la tabla Usuarios.</td></tr>'}
           </tbody></table></div>
         <div class="dpanel cfg"><div class="dph"><h3>Días festivos</h3><span class="sp"></span>${ro ? '' : '<button class="btn sm" id="hoAdd">+ Agregar</button>'}</div>
           <table class="t mini"><thead><tr><th>Fecha</th><th>Descripción</th><th></th></tr></thead><tbody>
@@ -173,15 +219,14 @@
 
       <div class="dpanel cfg"><div class="dph"><h3>Usuarios · QORVEX y QORVEX MOBILE</h3><span class="muted small">Una sola lista para los dos programas · la contraseña se guarda cifrada</span><span class="sp"></span>${D.users.some((u) => u.status === 'pendiente') ? `<span class="pill warn">${D.users.filter((u) => u.status === 'pendiente').length} solicitud(es) de registro</span>` : ''}${ro ? '' : '<button class="btn sm" id="usAdd">+ Agregar usuario</button>'}</div>
         <table class="t mini"><thead><tr><th>No. empleado</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Contraseña</th><th>Pedir cambio</th><th>Activo</th><th></th></tr></thead><tbody>
-        <tr class="muted"><td class="mono">ADMIN</td><td>Administrador maestro</td><td>Administrador</td><td><span class="pill ok">fija</span></td><td colspan="4" class="small">Cuenta de soporte integrada en el programa</td></tr>
-        ${D.users.map((u, i) => `<tr class="${u.status === 'pendiente' ? 'pend-row' : ''}"><td><input class="input" data-us="${i}" data-k="emp" value="${esc(u.emp)}" ${dis}></td><td><input class="input" data-us="${i}" data-k="name" value="${esc(u.name)}" ${dis}></td>
-          <td><select class="input" data-us="${i}" data-k="role" ${dis}>${Object.entries(ROLE_N).map(([k, t]) => `<option value="${k}" ${u.role === k ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
+        ${D.users.map((u, i) => { const mst = META.master && u.emp === META.master.emp, dm = mst ? 'disabled' : dis; return `<tr class="${u.status === 'pendiente' ? 'pend-row' : ''}"><td><input class="input" data-us="${i}" data-k="emp" value="${esc(u.emp)}" ${dm}></td><td><input class="input" data-us="${i}" data-k="name" value="${esc(u.name)}" ${dis}>${mst ? '<span class="pill ok" title="Primer Supervisor / Admin de la carpeta">👑 Admin master</span>' : ''}</td>
+          <td><select class="input" data-us="${i}" data-k="role" ${dm}>${Object.entries(ROLE_N).map(([k, t]) => `<option value="${k}" ${u.role === k ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
           <td>${u.status === 'pendiente' ? `<span class="pill warn">Pendiente</span>${ro ? '' : ` <button class="btn sm primary" data-usok="${i}">Aprobar</button>`}` : '<span class="pill ok">Activo</span>'}</td>
-          <td>${u.pw ? '<span class="pill ok">asignada</span>' : '<span class="pill warn">sin asignar</span>'} ${ro ? '' : `<button class="btn sm" data-uspw="${i}">${u.pw ? 'Cambiar' : 'Asignar'}</button>`}</td>
-          <td><input type="checkbox" data-us="${i}" data-k="must" ${u.must ? 'checked' : ''} ${dis}></td>
-          <td><input type="checkbox" data-us="${i}" data-k="active" ${u.active ? 'checked' : ''} ${dis}></td><td>${ro ? '' : `<button class="btn sm" data-usdel="${i}" title="${u.status === 'pendiente' ? 'Rechazar solicitud' : 'Quitar usuario'}">✕</button>`}</td></tr>`).join('')}
+          <td>${u.pw ? '<span class="pill ok">asignada</span>' : '<span class="pill warn">sin asignar</span>'} ${ro || (mst && !isMaster()) ? '' : `<button class="btn sm" data-uspw="${i}">${u.pw ? 'Cambiar' : 'Asignar'}</button>`}</td>
+          <td><input type="checkbox" data-us="${i}" data-k="must" ${u.must ? 'checked' : ''} ${dm}></td>
+          <td><input type="checkbox" data-us="${i}" data-k="active" ${u.active ? 'checked' : ''} ${dm}></td><td>${ro || mst ? '' : `<button class="btn sm" data-usdel="${i}" title="${u.status === 'pendiente' ? 'Rechazar solicitud' : 'Quitar usuario'}">✕</button>`}</td></tr>`; }).join('')}
         </tbody></table>
-        <div class="muted small">Administrador: todo. Capturista: trabaja en QORVEX y QORVEX MOBILE, sin CONFIGURACIÓN ni usuarios. Validador: captura y exporta en QORVEX MOBILE; no entra a QORVEX. Quien se registra queda <b>Pendiente</b> hasta que lo apruebes (y guardes la configuración).</div></div>
+        <div class="muted small">Supervisor / Admin: todo, y aparece en la lista de supervisores de la tableta. Capturista: trabaja en QORVEX y QORVEX MOBILE, sin CONFIGURACIÓN ni usuarios. Validador: captura y exporta en QORVEX MOBILE; no entra a QORVEX. Quien se registra queda <b>Pendiente</b> hasta que lo apruebes (y guardes la configuración).</div></div>
 
       <div class="dgrid cfg2">
         <div class="dpanel cfg"><div class="dph"><h3>Fondo del inicio de sesión</h3><span class="muted small">Con marca CH</span></div>
@@ -221,8 +266,19 @@
           </div>
         </div></div>
 
-      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.04.00</span></div>
+      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.05.00</span></div>
         <div class="about"><img src="img/favicon-ch-180.png" alt="CH Industrial Solutions"><div><b>Desarrollado por CH Industrial Solutions</b><br>Titular: Ing. Carlos Alberto Hernández Hernández<br>charliealberth290116@outlook.es · 8115377033 · General Escobedo, Nuevo León, México</div></div></div>
+
+      <div class="dpanel cfg"><div class="dph"><h3>Seguridad</h3><span class="muted small">Admin master · sello de la configuración · contraseñas · sesiones</span></div>
+        <div class="dgrid cfg2 secg">
+          <div><b>👑 Admin master</b>
+            <div class="essp">${META.master ? `<b>${esc(META.master.emp)} · ${esc(META.master.name)}</b>. Es el primer Supervisor / Admin de la carpeta: su contraseña cifrada está en Data Base\\Seguridad. Nadie más puede quitarle el rol ni cambiar su contraseña; solo él mismo.` : 'Aún no hay Admin master: el primer Supervisor / Admin que entre lo será.'}</div></div>
+          <div><b>🛡️ Sello de Config_QORVEX.json</b>
+            <div class="essp">${META.seal === 'ok' ? '✓ Sellada: QORVEX detecta si alguien la edita a mano.' : META.seal === 'mal' ? '⚠ Fue modificada fuera de QORVEX (con el Bloc de notas u otro programa). Revisa usuarios y roles; al presionar Guardar configuración se vuelve a sellar.' : 'Sin sello todavía: se sella al guardar la configuración.'}</div>
+            <b>🔒 Contraseñas</b>
+            <div class="essp">${(() => { const n = D.users.filter((u) => SEC().isWeak(u.pw)).length; return n ? `${n} con el cifrado anterior: se actualizan solas cuando cada usuario entra.` : 'Todas con cifrado PBKDF2.'; })()}</div></div>
+        </div>
+        <label class="lbl">QORVEX MOBILE: cerrar la sesión de la tableta tras <input class="input num" type="number" min="0" max="240" step="5" id="idleM" value="${D.mobile.idleMin}" ${dis}> minutos sin uso <span class="muted small">(0 = nunca; si hay lecturas sin SUBMIT, avisa y no las pierde)</span></label></div>
 
       <div class="dpanel cfg"><div class="dph"><h3>Motor</h3></div>
         <label class="lbl">Cerrar el modo Editor tras <input class="input num" type="number" min="5" step="5" id="idle" value="${D.motor.idleMin}" ${dis}> minutos sin movimiento</label></div>`;
@@ -239,8 +295,7 @@
       $$(`[data-${key}][data-k]`, m).forEach((i) => (i.onchange = () => { const o = arr()[+i.dataset[key]], k = i.dataset.k; o[k] = i.type === 'checkbox' ? i.checked : k === 'emp' ? i.value.trim().toUpperCase() : i.value; }));
       $$(`[data-${key}del]`, m).forEach((b) => (b.onclick = () => { arr().splice(+b.dataset[`${key}del`], 1); redraw(); }));
     };
-    bindList('sp', () => D.supervisors); bindList('ho', () => D.holidays); bindList('us', () => D.users);
-    $('#spAdd').onclick = () => { D.supervisors.push({ emp: '', name: '', active: true }); redraw(); };
+    bindList('ho', () => D.holidays); bindList('us', () => D.users);
     $('#hoAdd').onclick = () => { D.holidays.push({ d: '', n: '' }); redraw(); };
     $('#usAdd').onclick = () => { D.users.push({ emp: '', name: '', role: 'validador', pw: '', pwAt: 0, must: true, active: true, status: 'activo', created: Date.now(), by: '' }); redraw(); };
     $$('[data-usok]', m).forEach((b) => (b.onclick = () => { D.users[+b.dataset.usok].status = 'activo'; redraw(); toast('Aprobado · presiona Guardar configuración', 'ok'); }));
@@ -253,7 +308,8 @@
       const pw = await App.modal({ title: `Contraseña de ${esc(u.emp)} · ${esc(u.name)}`, body: '<label class="lbl">Contraseña nueva (mín. 4)<input class="input" type="password" id="pw1" autocomplete="new-password"></label><label class="lbl">Confirmar<input class="input" type="password" id="pw2" autocomplete="new-password"></label>',
         buttons: [{ t: 'Cancelar', v: null }, { t: 'Asignar', cls: 'primary', fn: (el) => { const a = $('#pw1', el).value, c = $('#pw2', el).value; if (a.length < 4) { toast('Mínimo 4 caracteres', 'warn'); return false; } if (a !== c) { toast('No coinciden', 'warn'); return false; } return a; } }] });
       if (!pw) return;
-      u.pw = await hashPw(u.emp, pw); u.pwAt = Date.now();
+      u.pw = await SEC().pwMake(u.emp, pw); u.pwAt = Date.now();
+      if (META.master && u.emp === META.master.emp) { if (!isMaster()) return toast('Solo el Admin master cambia su contraseña.', 'warn'); u.must = false; await SEC().writeMaster(App.S.dir, { ...META.master, pw: u.pw }); META.master = await SEC().readMaster(App.S.dir); }
       toast('Contraseña asignada · se aplica al guardar la configuración', 'ok'); redraw();
     }));
     $('#lbLogo').onchange = (e) => { D.labels.logo = e.target.checked; };
@@ -273,6 +329,7 @@
     $('#rpCover').onchange = (e) => { D.report.cover = e.target.value; $('#rpDays').hidden = e.target.value !== 'days'; };
     $('#rpDays').onchange = (e) => { D.report.coverDays = Math.max(1, Math.min(30, Number(e.target.value) || 3)); };
     $('#idle').onchange = (e) => { D.motor.idleMin = Math.max(5, parseInt(e.target.value, 10) || 30); };
+    $('#idleM').onchange = (e) => { D.mobile.idleMin = Math.max(0, Math.min(240, parseInt(e.target.value, 10) || 0)); };
     $('#cfReset').onclick = () => { D = null; redraw(); };
     $('#cfSave').onclick = async () => {
       const err = [];
@@ -281,8 +338,7 @@
       if (new Set(D.shifts.map((x) => x.n.toLowerCase())).size !== D.shifts.length) err.push('Hay turnos con el mismo nombre.');
       if (D.shifts.some((x) => !/^\d{2}:\d{2}$/.test(x.s) || !/^\d{2}:\d{2}$/.test(x.e))) err.push('Revisa las horas de inicio y fin.');
       const dupe = (a) => a.length !== new Set(a).size;
-      if (D.supervisors.some((s) => !s.emp || !s.name)) err.push('Cada supervisor necesita No. de empleado y nombre.');
-      if (dupe(D.supervisors.map((s) => s.emp))) err.push('Hay supervisores con el mismo No. de empleado.');
+      if (D.users.some((u) => u.emp === 'ADMIN')) err.push('ADMIN es un nombre reservado.');
       if (D.users.some((u) => !u.emp || !u.name)) err.push('Cada usuario necesita No. de empleado y nombre.');
       if (dupe(D.users.map((u) => u.emp))) err.push('Hay usuarios con el mismo No. de empleado.');
       if (D.holidays.some((h) => !/^\d{4}-\d{2}-\d{2}$/.test(h.d))) err.push('Cada festivo necesita fecha.');
@@ -300,5 +356,5 @@
   }
   const discard = () => { D = null; };
 
-  App.cfg = { normReport, NAME, DAYS, ROLE_N, addPending, load, save, render, discard, shiftAt, opDate, hours, hasGoal, holiday, isoDay, hm, inShift, hashPw, get: () => CFG, get loaded() { return META.loaded; } };
+  App.cfg = { normReport, NAME, DAYS, ROLE_N, addPending, upgradePw, sups, needsFirst, get seal() { return META.seal; }, get master() { return META.master; }, claimMaster, isMaster, load, save, render, discard, shiftAt, opDate, hours, hasGoal, holiday, isoDay, hm, inShift, hashPw, get: () => CFG, get loaded() { return META.loaded; } };
 })(window.App);
