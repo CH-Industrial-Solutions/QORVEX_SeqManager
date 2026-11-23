@@ -47,8 +47,8 @@
 
     m.innerHTML = `<div class="home">
       <section class="h-hero">
-        <div class="h-photo" style="background-image:url(img/hero-almacen-${light ? 'light' : 'dark'}.jpg)"></div>
-        <img class="h-logo" src="img/qorvex-logo-${light ? 'light' : 'dark'}.png" alt="QORVEX">
+        <div class="h-photo" style="background-image:url(img/almacen-${light ? 'claro' : 'oscuro'}.jpg)"></div>
+        <img class="h-logo" src="img/logo-qorvex-${light ? 'claro' : 'oscuro'}.png" alt="QORVEX">
         <div class="h-txt">
           <span class="h-eye">Advanced Manufacturing Control Platform</span>
           <span class="h-ttl">Manufacturing Intelligence Engine</span>

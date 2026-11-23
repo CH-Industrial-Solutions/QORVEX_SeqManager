@@ -51,9 +51,9 @@
   function show() {
     return new Promise((resolve) => {
       const n = wall();
-      $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/wall-${n}.jpg')">
+      $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/fondo-login-${n}.jpg')">
         <div class="lg-card">
-          <div class="lg-brand"><img src="img/qorvex-logo-${App.ui && App.ui.isLight && App.ui.isLight() ? 'light' : 'dark'}.png" alt="QORVEX"></div>
+          <div class="lg-brand"><img src="img/logo-qorvex-${App.ui && App.ui.isLight && App.ui.isLight() ? 'claro' : 'oscuro'}.png" alt="QORVEX"></div>
           <div class="lg-sw" role="tablist"><span class="lg-knob"></span><button type="button" class="on" data-p="0">Iniciar sesión</button><button type="button" data-p="1">Registrarse</button></div>
           <div class="lg-view"><div class="lg-track">
             <form class="lg-pane" id="fIn" autocomplete="off" novalidate>
@@ -115,9 +115,9 @@
   async function gate() {
     if (ME) return;
     const saved = App.S.savedDir;
-    $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/wall-${wall()}.jpg')">
+    $('#app').innerHTML = `<div class="lg-page" style="background-image:url('img/fondo-login-${wall()}.jpg')">
       <div class="lg-card">
-        <div class="lg-brand"><img src="img/qorvex-logo-${App.ui && App.ui.isLight && App.ui.isLight() ? 'light' : 'dark'}.png" alt="QORVEX"></div>
+        <div class="lg-brand"><img src="img/logo-qorvex-${App.ui && App.ui.isLight && App.ui.isLight() ? 'claro' : 'oscuro'}.png" alt="QORVEX"></div>
         <div class="lg-pane" style="width:100%">
           <h2>Iniciar sesión</h2>
           <p class="muted">Primero conecta la carpeta compartida <b>Data Base</b>: ahí están los usuarios, la configuración y las capturas.</p>

@@ -100,7 +100,7 @@
       <div class="shell ${SIDE.min ? 'min' : ''}">
       <aside class="side">
         <div class="sd-top"><button class="sd-tg" id="bSide" title="${SIDE.min ? 'Mostrar menú con nombres' : 'Mostrar solo íconos'}" aria-label="Mostrar u ocultar nombres del menú">${ICO.menu}</button></div>
-        <div class="sd-brand" id="bHome" title="Inicio"><img src="img/q-mark-dark.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div></div>
+        <div class="sd-brand" id="bHome" title="Inicio"><img src="img/q-oscuro.png" alt=""><div class="bt"><span class="bn">QORVE<i>X</i></span><small>Manufacturing Intelligence Engine</small></div></div>
         <nav class="sd-nav">
           ${group('Operación', ['home', 'planes', 'dash', 'pulls', 'inv', 'lbl'])}
           ${group('Indicadores', ['prod', 'rep'])}
@@ -113,7 +113,7 @@
           ${mode ? `<button class="sd-btn sd-mode ${canEd ? 'ed' : 'ro'}" id="bMode" title="Cambiar de modo (Editor / Consulta)">${canEd ? ICO.pen : ICO.eye}<span class="tx">${canEd ? 'Editor' : 'Consulta'}</span></button>` : ''}
           <button class="sd-btn" id="bTheme" title="Cambiar a tema ${isLight() ? 'oscuro' : 'claro'}">${isLight() ? ICO.sun : ICO.moon}<span class="tx">Tema ${isLight() ? 'claro' : 'oscuro'}</span></button>
           ${mode ? `<button class="sd-btn" id="bOut" title="Cerrar sesión y liberar el modo Editor">${ICO.out}<span class="tx">Cerrar sesión</span></button>` : ''}
-          <div class="sd-ver">V 13.05.01</div>
+          <div class="sd-ver">V 13.06.00</div>
         </div>
       </aside>
       <div class="mwrap">

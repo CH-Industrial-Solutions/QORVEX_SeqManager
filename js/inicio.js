@@ -11,7 +11,7 @@
     const w = document.createElement('div'); w.className = 'welcome';
     w.innerHTML = `<div class="w-glow g1"></div><div class="w-glow g2"></div>
       <div class="w-card">
-        <img class="w-logo" src="img/qorvex-logo.jpg" alt="QORVEX">
+        <img class="w-logo" src="img/logo-qorvex.jpg" alt="QORVEX">
         <div class="w-brand">Manufacturing Intelligence Engine</div>
         <div class="w-hi">${hi}</div>
         <div class="w-nm">Bienvenido</div>

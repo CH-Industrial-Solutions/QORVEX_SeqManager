@@ -230,7 +230,7 @@
 
       <div class="dgrid cfg2">
         <div class="dpanel cfg"><div class="dph"><h3>Fondo del inicio de sesión</h3><span class="muted small">Con marca CH</span></div>
-          <div class="walls">${[1, 2].map((n) => `<label class="wall ${D.brand.wall === n ? 'on' : ''}"><input type="radio" name="wall" value="${n}" ${D.brand.wall === n ? 'checked' : ''} ${dis}><img src="img/wall-${n}.jpg" alt="Fondo ${n}"><span>Fondo ${n}</span></label>`).join('')}</div></div>
+          <div class="walls">${[1, 2].map((n) => `<label class="wall ${D.brand.wall === n ? 'on' : ''}"><input type="radio" name="wall" value="${n}" ${D.brand.wall === n ? 'checked' : ''} ${dis}><img src="img/fondo-login-${n}.jpg" alt="Fondo ${n}"><span>Fondo ${n}</span></label>`).join('')}</div></div>
         <div class="dpanel cfg"><div class="dph"><h3>Logos de la empresa</h3><span class="muted small">Se imprimen en reportes · máximo 3</span><span class="sp"></span>${ro || D.brand.logos.length >= 3 ? '' : '<label class="btn sm">+ Cargar logo<input type="file" id="lgUp" accept="image/png,image/jpeg,image/svg+xml" hidden></label>'}</div>
           <div class="logos">${D.brand.logos.map((src, i) => `<div class="logo-it"><img src="${src}" alt="Logo ${i + 1}">${ro ? '' : `<button class="btn sm" data-lgdel="${i}">✕</button>`}</div>`).join('') || '<div class="muted small">El programa no trae logos de empresa. Cárgalos aquí si quieres que salgan en los reportes impresos.</div>'}</div></div>
       </div>
@@ -266,8 +266,8 @@
           </div>
         </div></div>
 
-      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.05.01</span></div>
-        <div class="about"><img src="img/favicon-ch-180.png" alt="CH Industrial Solutions"><div><b>Desarrollado por CH Industrial Solutions</b><br>Titular: Ing. Carlos Alberto Hernández Hernández<br>charliealberth290116@outlook.es · 8115377033 · General Escobedo, Nuevo León, México</div></div></div>
+      <div class="dpanel cfg"><div class="dph"><h3>Acerca de QORVEX</h3><span class="muted small">Versión 13.06.00</span></div>
+        <div class="about"><img src="img/icono-ch-180.png" alt="CH Industrial Solutions"><div><b>Desarrollado por CH Industrial Solutions</b><br>Titular: Ing. Carlos Alberto Hernández Hernández<br>charliealberth290116@outlook.es · 8115377033 · General Escobedo, Nuevo León, México</div></div></div>
 
       <div class="dpanel cfg"><div class="dph"><h3>Seguridad</h3><span class="muted small">Admin master · sello de la configuración · contraseñas · sesiones</span></div>
         <div class="dgrid cfg2 secg">
